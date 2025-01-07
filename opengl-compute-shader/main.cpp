@@ -6,8 +6,6 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
-#include "ShaderProgram.h"
-
 // Set to true to enable fullscreen
 bool FULLSCREEN = false;
 
@@ -30,7 +28,7 @@ void glfw_onFramebufferSize(GLFWwindow* window, int width, int height);
 void showFPS(GLFWwindow* window);
 bool initOpenGL();
 
-string fileToString(const string& filename)
+std::string fileToString(const std::string& filename)
 {
 	std::stringstream ss;
 	std::ifstream file;
@@ -59,14 +57,9 @@ int main(int argc, char **argv)
 {
 	initOpenGL();
 
-	// ShaderProgram shader;
-	//shader.loadShaders("shader/main_vert.glsl", "shader/tutorial.glsl");
-	// shader.loadShaders("shader/main_vert.glsl", "shader/fire_ball_frag.glsl");
-	//shader.loadShaders("shader/main_vert.glsl", "shader/unreal_intro_frag.glsl");
-
 	fmt::println("Initializing Compute Shader");
 	
-	string csString = fileToString("shader/gray-scott.cs");
+	std::string csString = fileToString("shader/gray-scott.cs");
 	const GLchar* csSourcePtr = csString.c_str();
 
 	GLuint compute_shader = glCreateShader(GL_COMPUTE_SHADER);
@@ -127,7 +120,7 @@ int main(int argc, char **argv)
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
 	// glTexStorage2D(GL_TEXTURE_2D, 1, GL_RGBA8, W, H);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, tex_w, tex_h, 0, GL_RGBA, GL_FLOAT, NULL);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, tex_w, tex_h, 0, GL_RGBA, GL_INT, NULL);
 	glBindImageTexture(4, tex_output, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA8);
 
 	// Get the max work group count

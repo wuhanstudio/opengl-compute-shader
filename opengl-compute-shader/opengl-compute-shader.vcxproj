@@ -156,16 +156,9 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="ShaderProgram.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="ShaderProgram.h" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="shader\fire_ball_frag.glsl" />
-    <None Include="shader\main_vert.glsl" />
-    <None Include="shader\tutorial.glsl" />
-    <None Include="shader\unreal_intro_frag.glsl" />
+    <None Include="shader\gray-scott.cs" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
