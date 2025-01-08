@@ -61,6 +61,8 @@ float A2cpu[gWindowWidth * gWindowHeight];
 float B1cpu[gWindowWidth * gWindowHeight];
 float B2cpu[gWindowWidth * gWindowHeight];
 
+GLuint redData[1280 * 720 * 4];
+
 int main(int argc, char **argv)
 {
 	initOpenGL();
@@ -84,10 +86,10 @@ int main(int argc, char **argv)
 	// Set up the rectangle
 	//1. Set up an array of vertices for a quad (2 triangls) with an index buffer data
 	GLfloat vertices[] = {
-		-1.0f,  1.0f, 0.0f,		// Top left
-		 1.0f,  1.0f, 0.0f,		// Top right
-		 1.0f, -1.0f, 0.0f,		// Bottom right
-		-1.0f, -1.0f, 0.0f		// Bottom left 
+		-1.0f,  1.0f, 0.0f, 0.0f, 1.0f,		// Top left
+		 1.0f,  1.0f, 0.0f,	1.0f, 1.0f, 	// Top right
+		 1.0f, -1.0f, 0.0f,	1.0f, 0.0f, 	// Bottom right
+		-1.0f, -1.0f, 0.0f,	0.0f, 0.0f  	// Bottom left 
 	};
 
 	GLuint indices[] = {
@@ -102,12 +104,18 @@ int main(int argc, char **argv)
 	glGenBuffers(1, &VBO);					// Generate an empty vertex buffer on the GPU
 	glGenBuffers(1, &IBO);					// Create buffer space on the GPU for the index buffer
 
-	glBindVertexArray(VAO);					// Make it the current one
 	glBindBuffer(GL_ARRAY_BUFFER, VBO);		// "bind" or set as the current buffer we are working with
-
 	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);	// copy the data from CPU to GPU
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, NULL);	// Define a layout for the first vertex buffer "0"
+
+	glBindVertexArray(VAO);					// Make it the current one
+	
+	// Position attribute
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), NULL);	// Define a layout for the first vertex buffer "0"
 	glEnableVertexAttribArray(0);			// Enable the first attribute or attribute "0"
+
+	// Texture attribute
+	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (void*)(sizeof(float) * 3));	// Define a layout for the second vertex buffer "1"
+	glEnableVertexAttribArray(1);			// Enable the second attribute or attribute "1"
 
 	// Set up index buffer
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, IBO);
@@ -137,16 +145,19 @@ int main(int argc, char **argv)
 	glGenTextures(1, &red_texture);
 	glBindTexture(GL_TEXTURE_2D, red_texture);
 
-	std::vector<GLfloat> redData(1280 * 720 * 4, 0);
 	for (int i = 0; i < 1280 * 720; ++i) {
-		redData[i * 4 + 0] = 1.0; // R
-		redData[i * 4 + 1] = 0.0;   // G
-		redData[i * 4 + 2] = 0.0;   // B
-		redData[i * 4 + 3] = 1.0; // A
+		if ( i < (1280 * 360))
+			redData[i + 0 * (1280*720)] = 255; // R
+		else
+			redData[i + 0 * (1280 * 720)] = 0;   // R
+
+		redData[i + 1 * (1280 * 720)] = 0;   // G
+		redData[i + 2 * (1280 * 720)] = 0;   // B
+		redData[i + 3 * (1280 * 720)] = 255; // A
 	}
 
 	// Allocate and upload the texture data
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, 1280, 720, 0, GL_RGBA, GL_FLOAT, redData.data());
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 1280, 720, 0, GL_RGBA, GL_UNSIGNED_BYTE, &redData);
 
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
