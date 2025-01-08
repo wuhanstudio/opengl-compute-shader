@@ -195,10 +195,7 @@ int main(int argc, char **argv)
 			A2cpu[idx] = 1.0;
 
 			if (rand() / float(RAND_MAX) < 0.0021)
-			{
 				B1cpu[idx] = 1.0;
-				fmt::println("1.0");
-			}
 			else 
 				B1cpu[idx] = 0.0;
 
