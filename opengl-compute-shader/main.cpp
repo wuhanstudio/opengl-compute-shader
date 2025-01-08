@@ -1,16 +1,19 @@
 #include <fmt/core.h>
 
+#include <vector>
 #include <fstream>
 #include <sstream>
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
+#include "ShaderProgram.h"
+
 // Set to true to enable fullscreen
 bool FULLSCREEN = false;
 
 GLFWwindow* gWindow = NULL;
-const char* APP_TITLE = "ShaderToy";
+const char* APP_TITLE = "Gray Scott - Compute Shader";
 
 // Window dimensions
 const int gWindowWidth = 1280;
@@ -53,6 +56,11 @@ std::string fileToString(const std::string& filename)
 	return ss.str();
 }
 
+float A1cpu[gWindowWidth * gWindowHeight];
+float A2cpu[gWindowWidth * gWindowHeight];
+float B1cpu[gWindowWidth * gWindowHeight];
+float B2cpu[gWindowWidth * gWindowHeight];
+
 int main(int argc, char **argv)
 {
 	initOpenGL();
@@ -69,6 +77,9 @@ int main(int argc, char **argv)
 	GLuint compute_program = glCreateProgram();
 	glAttachShader(compute_program, compute_shader);
 	glLinkProgram(compute_program);
+
+	ShaderProgram shader;
+	shader.loadShaders("shader/vert.glsl", "shader/frag.glsl");
 
 	// Set up the rectangle
 	//1. Set up an array of vertices for a quad (2 triangls) with an index buffer data
@@ -111,17 +122,38 @@ int main(int argc, char **argv)
 	int tex_w = 1280, tex_h = 720;
 
 	glGenTextures(1, &tex_output);
-	// glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, tex_output);
+
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, tex_w, tex_h, 0, GL_RGBA, GL_UNSIGNED_INT, NULL);
 
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
-	// glTexStorage2D(GL_TEXTURE_2D, 1, GL_RGBA8, W, H);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, tex_w, tex_h, 0, GL_RGBA, GL_INT, NULL);
-	glBindImageTexture(4, tex_output, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA8);
+	glBindTexture(GL_TEXTURE_2D, 0);
+
+	GLuint red_texture;
+	glGenTextures(1, &red_texture);
+	glBindTexture(GL_TEXTURE_2D, red_texture);
+
+	std::vector<GLfloat> redData(1280 * 720 * 4, 0);
+	for (int i = 0; i < 1280 * 720; ++i) {
+		redData[i * 4 + 0] = 1.0; // R
+		redData[i * 4 + 1] = 0.0;   // G
+		redData[i * 4 + 2] = 0.0;   // B
+		redData[i * 4 + 3] = 1.0; // A
+	}
+
+	// Allocate and upload the texture data
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, 1280, 720, 0, GL_RGBA, GL_FLOAT, redData.data());
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+	glBindTexture(GL_TEXTURE_2D, 0);
 
 	// Get the max work group count
 	GLint work_grp_cnt[3];
@@ -148,10 +180,10 @@ int main(int argc, char **argv)
 	glGetIntegerv(GL_MAX_COMPUTE_WORK_GROUP_INVOCATIONS, &work_grp_inv);
 	printf("max local work group invocations %i\n", work_grp_inv);
 
-	float* A1cpu = new float[gWindowWidth*gWindowHeight];
-	float* A2cpu = new float[gWindowWidth*gWindowHeight];
-	float* B1cpu = new float[gWindowWidth*gWindowHeight];
-	float* B2cpu = new float[gWindowWidth*gWindowHeight];
+	//float* A1cpu = new float[gWindowWidth*gWindowHeight];
+	//float* A2cpu = new float[gWindowWidth*gWindowHeight];
+	//float* B1cpu = new float[gWindowWidth*gWindowHeight];
+	//float* B2cpu = new float[gWindowWidth*gWindowHeight];
 
     // initialize
     for(int x=0; x < gWindowWidth; x++)
@@ -161,15 +193,21 @@ int main(int argc, char **argv)
 			int idx = x + y * gWindowWidth;
 			A1cpu[idx] = 1.0;
 			A2cpu[idx] = 1.0;
-			if(rand()/float(RAND_MAX) < 0.000021)
-				B1cpu[idx] = 1.0; else B1cpu[idx] = 0.0;
+
+			if (rand() / float(RAND_MAX) < 0.0021)
+			{
+				B1cpu[idx] = 1.0;
+				fmt::println("1.0");
+			}
+			else 
+				B1cpu[idx] = 0.0;
+
 			B2cpu[idx] = 0.0;
 		}
 	}
 
 	// Buffer object IDs
 	GLuint A1, B1, A2, B2;
-    GLuint bindingPoint = 0;
 
 	// Generate buffer objects
     glGenBuffers(1, &A1);
@@ -178,47 +216,62 @@ int main(int argc, char **argv)
     glGenBuffers(1, &B2);
 
 	// Bind the buffer to a specific binding point
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, A1);
-    glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(A1cpu), A1cpu, GL_STATIC_DRAW);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, bindingPoint, A1);
+	glBindBuffer(GL_SHADER_STORAGE_BUFFER, A1);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(float) * gWindowWidth * gWindowHeight, A1cpu, GL_STATIC_DRAW);
+	//glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
 
-    bindingPoint = 1;
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, A2);
-    glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(A2cpu), A2cpu, GL_STATIC_DRAW);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, bindingPoint, A2);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(float) * gWindowWidth * gWindowHeight, A2cpu, GL_STATIC_DRAW);
+	//glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
 
-    bindingPoint = 2;
 	glBindBuffer(GL_SHADER_STORAGE_BUFFER, B1);
-    glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(B1cpu), B1cpu, GL_STATIC_DRAW);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, bindingPoint, B1);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(float) * gWindowWidth * gWindowHeight, B1cpu, GL_STATIC_DRAW);
+	//glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
 
-    bindingPoint = 3;
 	glBindBuffer(GL_SHADER_STORAGE_BUFFER, B2);
-    glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(B2cpu), B2cpu, GL_STATIC_DRAW);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, bindingPoint, B2);
+	glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(float) * gWindowWidth * gWindowHeight, B2cpu, GL_STATIC_DRAW);
+	//glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
+
+	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, A1);
+	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, A2);
+	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, B1);
+	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, B2);
 
     // Unbind the buffer (optional)
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 
-
+	int c = 1;
 	while (glfwWindowShouldClose(gWindow) == 0) {
+		showFPS(gWindow);
 
-		{ // launch compute shaders!
+		{
+			c = 1 - c;
+			glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0 + c, A1);
+			glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0 + 1 - c, A2);
+			glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2 + c, B1);
+			glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2 + 1 - c, B2);
+
+			// launch compute shaders!
 			glUseProgram(compute_program);
-			glDispatchCompute((GLuint)tex_w, (GLuint)tex_h, 1);
+			glBindImageTexture(4, tex_output, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA8);
+			glDispatchCompute(64, 36, 1);
 		}
 		
 		// make sure writing to image has finished before read
 		glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
-		
+
 		{ 
 			// normal drawing pass
 			glClear(GL_COLOR_BUFFER_BIT);
-			glUseProgram(compute_program);
-			glBindVertexArray(VAO);
+
+			shader.use();
+
 			glActiveTexture(GL_TEXTURE0);
 			glBindTexture(GL_TEXTURE_2D, tex_output);
-			// glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+			//glBindTexture(GL_TEXTURE_2D, red_texture);
+			glUniform1i(glGetUniformLocation(shader.getProgram(), "screenTexture"), 0);
+
+			glBindVertexArray(VAO);
 			glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
 			glBindVertexArray(0);
@@ -233,7 +286,7 @@ int main(int argc, char **argv)
 	glDeleteBuffers(1, &IBO);
 	glDeleteVertexArrays(1, &VAO);
 
-	// shader.destroy();
+	shader.destroy();
 
 	glfwTerminate();
 
@@ -272,8 +325,8 @@ bool initOpenGL()
 	}
 
 	// Set the OpenGL version
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 4);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 	glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);	// forward compatible with newer versions of OpenGL as they become available but not backward compatible (it will not run on devices that do not support OpenGL 3.3
 
@@ -328,7 +381,7 @@ void showFPS(GLFWwindow* window) {
 		double msPerFrame = 1000.0 / fps;
 
 		char title[80];
-		std::snprintf(title, sizeof(title), "Hello Shader @ fps: %.2f, ms/frame: %.2f", fps, msPerFrame);
+		std::snprintf(title, sizeof(title), "Gray Scott @ fps: %.2f, ms/frame: %.2f", fps, msPerFrame);
 		glfwSetWindowTitle(window, title);
 
 		frameCount = 0;
