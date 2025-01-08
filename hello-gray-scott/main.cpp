@@ -9,15 +9,21 @@
 
 #include "ShaderProgram.h"
 
+// Set to true to use test data for the texture
+bool USE_TEST_DATA = false;
+
 // Set to true to enable fullscreen
 bool FULLSCREEN = false;
+
+// Gray Scott Reaction Diffusion Frid
+const int WIDTH = 1280, HEIGHT = 720;
 
 GLFWwindow* gWindow = NULL;
 const char* APP_TITLE = "Gray Scott - Compute Shader";
 
 // Window dimensions
-const int gWindowWidth = 1280;
-const int gWindowHeight = 720;
+const int gWindowWidth = WIDTH;
+const int gWindowHeight = HEIGHT;
 
 // Fullscreen dimensions
 int gWindowWidthFull = 1920;
@@ -31,44 +37,23 @@ void glfw_onFramebufferSize(GLFWwindow* window, int width, int height);
 void showFPS(GLFWwindow* window);
 bool initOpenGL();
 
-std::string fileToString(const std::string& filename)
-{
-	std::stringstream ss;
-	std::ifstream file;
+// Read a compute shader to string
+std::string fileToString(const std::string& filename);
 
-	try
-	{
-		file.open(filename, std::ios::in);
-
-		if (!file.fail())
-		{
-			// Using a std::stringstream is easier than looping through each line of the file
-			ss << file.rdbuf();
-		}
-
-		file.close();
-	}
-	catch (std::exception ex)
-	{
-		fmt::println("Error reading shader filename!");
-	}
-
-	return ss.str();
-}
-
+// Statically allocated arrays for the simulation
 float A1cpu[gWindowWidth * gWindowHeight];
 float A2cpu[gWindowWidth * gWindowHeight];
 float B1cpu[gWindowWidth * gWindowHeight];
 float B2cpu[gWindowWidth * gWindowHeight];
 
-GLuint redData[1280 * 720 * 4];
+// Testing texture data
+GLuint testData[WIDTH * HEIGHT * 4];
 
 int main(int argc, char **argv)
 {
 	initOpenGL();
 
-	fmt::println("Initializing Compute Shader");
-	
+	// Load the compute shader
 	std::string csString = fileToString("shader/gray-scott.cs");
 	const GLchar* csSourcePtr = csString.c_str();
 
@@ -80,11 +65,11 @@ int main(int argc, char **argv)
 	glAttachShader(compute_program, compute_shader);
 	glLinkProgram(compute_program);
 
+	// Load the vertex and fragment shaders for rendering the results
 	ShaderProgram shader;
 	shader.loadShaders("shader/vert.glsl", "shader/frag.glsl");
 
-	// Set up the rectangle
-	//1. Set up an array of vertices for a quad (2 triangls) with an index buffer data
+	// Set up the vertices and texure coordinates for two quads (one rectangle)
 	GLfloat vertices[] = {
 		-1.0f,  1.0f, 0.0f, 0.0f, 1.0f,		// Top left
 		 1.0f,  1.0f, 0.0f,	1.0f, 1.0f, 	// Top right
@@ -127,12 +112,11 @@ int main(int argc, char **argv)
 
 	// Create a texture to write to
 	GLuint tex_output;
-	int tex_w = 1280, tex_h = 720;
 
 	glGenTextures(1, &tex_output);
 	glBindTexture(GL_TEXTURE_2D, tex_output);
 
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, tex_w, tex_h, 0, GL_RGBA, GL_UNSIGNED_INT, NULL);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, WIDTH, HEIGHT, 0, GL_RGBA, GL_UNSIGNED_INT, NULL);
 
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -141,30 +125,34 @@ int main(int argc, char **argv)
 
 	glBindTexture(GL_TEXTURE_2D, 0);
 
-	GLuint red_texture;
-	glGenTextures(1, &red_texture);
-	glBindTexture(GL_TEXTURE_2D, red_texture);
+	GLuint test_texture;
+	glGenTextures(1, &test_texture);
+	glBindTexture(GL_TEXTURE_2D, test_texture);
 
-	for (int i = 0; i < 1280 * 720; ++i) {
-		if ( i < (1280 * 360))
-			redData[i + 0 * (1280*720)] = 255; // R
-		else
-			redData[i + 0 * (1280 * 720)] = 0;   // R
+	if (USE_TEST_DATA)
+	{
+		// Initialize the test texture data
+		for (int i = 0; i < WIDTH * HEIGHT; ++i) {
+			if (i < (WIDTH * HEIGHT / 2))
+				testData[i + 0 * (WIDTH * HEIGHT)] = 255; // R
+			else
+				testData[i + 0 * (WIDTH * HEIGHT)] = 0;   // R
 
-		redData[i + 1 * (1280 * 720)] = 0;   // G
-		redData[i + 2 * (1280 * 720)] = 0;   // B
-		redData[i + 3 * (1280 * 720)] = 255; // A
+			testData[i + 1 * (WIDTH * HEIGHT)] = 0;   // G
+			testData[i + 2 * (WIDTH * HEIGHT)] = 0;   // B
+			testData[i + 3 * (WIDTH * HEIGHT)] = 255; // A
+		}
+
+		// Allocate and upload the texture data
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, WIDTH, HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, &testData);
+
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+		glBindTexture(GL_TEXTURE_2D, 0);
 	}
-
-	// Allocate and upload the texture data
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 1280, 720, 0, GL_RGBA, GL_UNSIGNED_BYTE, &redData);
-
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-	glBindTexture(GL_TEXTURE_2D, 0);
 
 	// Get the max work group count
 	GLint work_grp_cnt[3];
@@ -191,12 +179,13 @@ int main(int argc, char **argv)
 	glGetIntegerv(GL_MAX_COMPUTE_WORK_GROUP_INVOCATIONS, &work_grp_inv);
 	printf("max local work group invocations %i\n", work_grp_inv);
 
+	// Dynamically allocated arrays for the simulation
 	//float* A1cpu = new float[gWindowWidth*gWindowHeight];
 	//float* A2cpu = new float[gWindowWidth*gWindowHeight];
 	//float* B1cpu = new float[gWindowWidth*gWindowHeight];
 	//float* B2cpu = new float[gWindowWidth*gWindowHeight];
 
-    // initialize
+	// Initialize the simulation
     for(int x=0; x < gWindowWidth; x++)
 	{
 		for(int y=0; y < gWindowHeight; y++)
@@ -226,19 +215,15 @@ int main(int argc, char **argv)
 	// Bind the buffer to a specific binding point
 	glBindBuffer(GL_SHADER_STORAGE_BUFFER, A1);
     glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(float) * gWindowWidth * gWindowHeight, A1cpu, GL_STATIC_DRAW);
-	//glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
 
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, A2);
     glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(float) * gWindowWidth * gWindowHeight, A2cpu, GL_STATIC_DRAW);
-	//glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
 
 	glBindBuffer(GL_SHADER_STORAGE_BUFFER, B1);
     glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(float) * gWindowWidth * gWindowHeight, B1cpu, GL_STATIC_DRAW);
-	//glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
 
 	glBindBuffer(GL_SHADER_STORAGE_BUFFER, B2);
 	glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(float) * gWindowWidth * gWindowHeight, B2cpu, GL_STATIC_DRAW);
-	//glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
 
 	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, A1);
 	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, A2);
@@ -250,6 +235,9 @@ int main(int argc, char **argv)
 
 	int c = 1;
 	while (glfwWindowShouldClose(gWindow) == 0) {
+		// Vsync - comment this out if you want to disable vertical sync
+		//glfwSwapInterval(0);
+
 		showFPS(gWindow);
 
 		{
@@ -261,8 +249,12 @@ int main(int argc, char **argv)
 
 			// launch compute shaders!
 			glUseProgram(compute_program);
+
+			glUniform1i(glGetUniformLocation(compute_program, "W"), WIDTH);
+			glUniform1i(glGetUniformLocation(compute_program, "H"), HEIGHT);
+
 			glBindImageTexture(4, tex_output, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA8);
-			glDispatchCompute(64, 36, 1);
+			glDispatchCompute(WIDTH / 20, HEIGHT / 20, 1);
 		}
 		
 		// make sure writing to image has finished before read
@@ -275,8 +267,11 @@ int main(int argc, char **argv)
 			shader.use();
 
 			glActiveTexture(GL_TEXTURE0);
-			glBindTexture(GL_TEXTURE_2D, tex_output);
-			//glBindTexture(GL_TEXTURE_2D, red_texture);
+			if (USE_TEST_DATA)
+				glBindTexture(GL_TEXTURE_2D, test_texture);
+			else
+				glBindTexture(GL_TEXTURE_2D, tex_output);
+
 			glUniform1i(glGetUniformLocation(shader.getProgram(), "screenTexture"), 0);
 
 			glBindVertexArray(VAO);
@@ -294,11 +289,41 @@ int main(int argc, char **argv)
 	glDeleteBuffers(1, &IBO);
 	glDeleteVertexArrays(1, &VAO);
 
+	glDeleteBuffers(1, &A1);
+	glDeleteBuffers(1, &A2);
+	glDeleteBuffers(1, &B1);
+	glDeleteBuffers(1, &B2);
+
 	shader.destroy();
 
 	glfwTerminate();
 
 	return 0;
+}
+
+std::string fileToString(const std::string& filename)
+{
+	std::stringstream ss;
+	std::ifstream file;
+
+	try
+	{
+		file.open(filename, std::ios::in);
+
+		if (!file.fail())
+		{
+			// Using a std::stringstream is easier than looping through each line of the file
+			ss << file.rdbuf();
+		}
+
+		file.close();
+	}
+	catch (std::exception ex)
+	{
+		fmt::println("Error reading shader {}!", filename);
+	}
+
+	return ss.str();
 }
 
 // Press ESC to close the window

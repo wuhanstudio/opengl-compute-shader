@@ -178,6 +178,15 @@ void ShaderProgram::setUniform(const GLchar* name, const glm::vec4& v)
 }
 
 //-----------------------------------------------------------------------------
+// Sets a GLint shader uniform
+//-----------------------------------------------------------------------------
+void ShaderProgram::setUniform(const GLchar* name, const GLint v)
+{
+	GLint loc = getUniformLocation(name);
+	glUniform1i(loc, v);
+}
+
+//-----------------------------------------------------------------------------
 // Returns the uniform identifier given it's string name.
 // NOTE: Shader must be currently active first.
 //-----------------------------------------------------------------------------
