@@ -16,18 +16,24 @@
 #define _CRT_SECURE_NO_WARNINGS
 #endif
 
+#include <fmt/core.h>
+
+#include <iostream>
+#include <fstream>
+#include <sstream>
+
 #include <cstdio>
 #include <cstdlib>
-#include <iostream>
 #include <string>
 #include <cmath>
+
 using namespace std;
+
 #include <GL/glew.h>
 #include <GL/glut.h>
 
 const int NX = 280;		// solver grid resolution
 const int NY = 160;
-char* filetobuf(const char* file); // (copied from Wikipedia)
 
 const float SCALE = 1;
 const int SCRWIDTH = 1280 * SCALE;		// screen size
@@ -72,6 +78,7 @@ struct col
 	float r, g, b, a;
 };
 p particles[NUMP];
+
 /*--------------------- Shader Programs ------------------------------------------------------------------*/
 GLuint lbmCS_Program;
 GLuint moveparticlesCS_Program;
@@ -145,16 +152,42 @@ void updateF(void)
 	glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
 }
 
+
+std::string fileToString(const std::string& filename)
+{
+	std::stringstream ss;
+	std::ifstream file;
+
+	try
+	{
+		file.open(filename, std::ios::in);
+
+		if (!file.fail())
+		{
+			// Using a std::stringstream is easier than looping through each line of the file
+			ss << file.rdbuf();
+		}
+
+		file.close();
+	}
+	catch (std::exception ex)
+	{
+		fmt::println("Error reading shader {}!", filename);
+	}
+
+	return ss.str();
+}
+
 void init_shaders(void)
 {
 	char log[12048];
 	int len = 0;
 	len = 0;
-	GLchar* lbmCS_Source;
 	GLuint lbmCS_Shader;
-	lbmCS_Source = filetobuf("shaders/lbm.cs");
+	std::string csString = fileToString("shaders/lbm.cs");
+	const GLchar* lbmCS_Source = csString.c_str();
 	lbmCS_Shader = glCreateShader(GL_COMPUTE_SHADER);
-	glShaderSource(lbmCS_Shader, 1, (const GLchar**)&lbmCS_Source, 0);
+	glShaderSource(lbmCS_Shader, 1, &lbmCS_Source, NULL);
 	glCompileShader(lbmCS_Shader);
 	glGetShaderInfoLog(lbmCS_Shader, 12047, &len, log);
 	//log[len] = '\0';	cout << "!! -----> " << log << endl;
@@ -167,11 +200,11 @@ void init_shaders(void)
 	glUseProgram(0);
 
 	/*---------------------- Initialise particles shader and buffers on GPU ---------------------------------*/
-	GLchar* moveparticlesCS_Source;
 	GLuint moveparticlesCS_Shader;
-	moveparticlesCS_Source = filetobuf("shaders/particles.cs");
+	std::string csPString = fileToString("shaders/particles.cs");
+	const GLchar* moveparticlesCS_Source = csPString.c_str();
 	moveparticlesCS_Shader = glCreateShader(GL_COMPUTE_SHADER);
-	glShaderSource(moveparticlesCS_Shader, 1, (const GLchar**)&moveparticlesCS_Source, 0);
+	glShaderSource(moveparticlesCS_Shader, 1, &moveparticlesCS_Source, NULL);
 	glCompileShader(moveparticlesCS_Shader);
 	glGetShaderInfoLog(moveparticlesCS_Shader, 1023, &len, log);
 	log[len] = '\0';	cout << log << endl;
@@ -444,26 +477,9 @@ void Motion(int x, int y)
 		glutPostRedisplay();
 	}
 }
-/*--------------------- Boring File I/O ---------------------------------------------------------------------------*/
-char* filetobuf(const char* file) // (copied from Wikipedia)
-{
-	FILE* fptr;
-	long length;
-	char* buf;
-	fptr = fopen(file, "r");
-	if (!fptr)
-		return NULL;
-	fseek(fptr, 0, SEEK_END);
-	length = ftell(fptr);
-	buf = (char*)malloc(length + 1);
-	for (int i = 0;i < length + 1;i++) buf[i] = 0;
-	fseek(fptr, 0, SEEK_SET);
-	fread(buf, length, 1, fptr);
-	fclose(fptr);
-	buf[length] = 0;
-	return buf;
-}
+
 /*--------------------- Main loop ---------------------------------------------------------------------------*/
+
 int main(int argc, char** argv)
 {
 	glutInit(&argc, argv);
