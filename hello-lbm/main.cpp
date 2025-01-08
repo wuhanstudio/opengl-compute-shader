@@ -12,10 +12,6 @@
 //
 // 1-fluid,0-boundary
 
-#ifdef _MSC_VER
-#define _CRT_SECURE_NO_WARNINGS
-#endif
-
 #include <fmt/core.h>
 
 #include <iostream>
@@ -26,8 +22,6 @@
 #include <cstdlib>
 #include <string>
 #include <cmath>
-
-using namespace std;
 
 #include <GL/glew.h>
 #include <GL/glut.h>
@@ -42,15 +36,18 @@ const int SCRHEIGHT = 720 * SCALE;		// screen size y
 /*--------------------- Mouse ---------------------------------------------------------------------------*/
 int mousedown = 0;
 float xMouse, yMouse;
+
 /*--------------------- On offs -------------------------------------------------------------------------*/
 int moveonoff = 1;
 int calconoff = 1;
 int clearonoff = 1;
+
 /*--------------------- LBM -----------------------------------------------------------------------------*/
 float fx = 1, fx2 = 1;
 float fy = 0, fy2 = 1;
 float angle = 0;				// for rotations of the body force vec
 float force = -0.000007;// 5;		// body force magnitude
+
 /*--------------------- LBM State vector ----------------------------------------------------------------*/
 #define NUM_VECTORS 9		// lbm basis vectors (d2q9 model)
 GLuint col_SSB;
@@ -66,13 +63,15 @@ int F_cpu[NX * NY];
 float* color_CPU = new float[NX * NY];
 
 /*--------------------- Particles -----------------------------------------------------------------------*/
-float dt = 0.1;// 05;
+float dt = 0.1;
 const int NUMP = 690000;
 GLuint particles_SSB;
+
 struct p
 {
 	float x, y;
 };
+
 struct col
 {
 	float r, g, b, a;
@@ -95,6 +94,7 @@ void GenerateSSB(GLuint& bufid, int width, int height, float a)
 			temp[x + y * width] = a;
 	glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
 }
+
 void GenerateCOPY(GLuint& bufid, int width, int height, float a)
 {
 	glGenBuffers(1, &bufid);
@@ -102,6 +102,7 @@ void GenerateCOPY(GLuint& bufid, int width, int height, float a)
 	glBufferData(GL_COPY_READ_BUFFER, width * height * sizeof(float), NULL, GL_DYNAMIC_DRAW);
 	glUnmapBuffer(GL_COPY_READ_BUFFER);
 }
+
 /*--------------------- Reset positions in particle buffers -----------------------------------------------*/
 void resetparticles(void)
 {
@@ -115,6 +116,7 @@ void resetparticles(void)
 	}
 	glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
 }
+
 /*--------------------- Update obstacle flags -------------------------------------------------------------*/
 void updateF(void)
 {
@@ -122,8 +124,6 @@ void updateF(void)
 	int* F_temp = (int*)glMapBufferRange(GL_SHADER_STORAGE_BUFFER, 0, NX * NY * sizeof(int), GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT);
 
 	int i = 0, xx, yy;
-
-
 
 	for (int x = 0; x < NX; x++)
 		for (int y = 0; y < NY; y++)
@@ -189,8 +189,11 @@ void init_shaders(void)
 	lbmCS_Shader = glCreateShader(GL_COMPUTE_SHADER);
 	glShaderSource(lbmCS_Shader, 1, &lbmCS_Source, NULL);
 	glCompileShader(lbmCS_Shader);
+
 	glGetShaderInfoLog(lbmCS_Shader, 12047, &len, log);
-	//log[len] = '\0';	cout << "!! -----> " << log << endl;
+	log[len] = '\0';
+	fmt::println("Shader compiled: {}", log);
+
 	lbmCS_Program = glCreateProgram();
 	glAttachShader(lbmCS_Program, lbmCS_Shader);
 	glLinkProgram(lbmCS_Program);
@@ -206,8 +209,11 @@ void init_shaders(void)
 	moveparticlesCS_Shader = glCreateShader(GL_COMPUTE_SHADER);
 	glShaderSource(moveparticlesCS_Shader, 1, &moveparticlesCS_Source, NULL);
 	glCompileShader(moveparticlesCS_Shader);
+
 	glGetShaderInfoLog(moveparticlesCS_Shader, 1023, &len, log);
-	log[len] = '\0';	cout << log << endl;
+	log[len] = '\0';
+	fmt::println("Shader compiled: {}", log);
+
 	moveparticlesCS_Program = glCreateProgram();
 	glAttachShader(moveparticlesCS_Program, moveparticlesCS_Shader);
 	glLinkProgram(moveparticlesCS_Program);
@@ -303,17 +309,15 @@ void init(void)
 	GLenum err = glewInit();
 	if (GLEW_OK != err)
 	{
-		cout << "Error: " << glewGetErrorString(err) << endl;
+		fmt::println("Init Error:\n");
+		//fmt::println("Error: {}\n", glewGetErrorString(err));
 		exit(0);
 	}
-	cout << "Status: Using GLEW " << glewGetString(GLEW_VERSION) << endl;
+	//fmt::println("Status: Using GLEW {}", glewGetString(GLEW_VERSION));
+	
 	/*-------------------- Compute shaders programs etc. ----------------------------------------------------*/
-
-
-
 	init_shaders();
 	init_buffers();
-
 }
 
 void redisplay(int w, int h)
@@ -327,15 +331,13 @@ void redisplay(int w, int h)
 int c = 0;
 float time_ = 0;
 
+#define NUMR 20 //40
+
 void render(void)
 {
-
-
 	// computation (!)
-
-#define NUMR 20 //40
-//unsigned long int t1 = GetTickCount();
 	if (calconoff)
+	{
 		for (int i = 0; i < NUMR; i++)
 		{
 			glBindBufferBase(GL_SHADER_STORAGE_BUFFER, c, c0_SSB);
@@ -347,6 +349,8 @@ void render(void)
 			glDispatchCompute(NX / 10, NY / 10, 1);
 			glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 		}
+	}
+
 	glUseProgram(moveparticlesCS_Program);
 	glDispatchCompute(NUMP / 1000, 1, 1);
 	glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
@@ -365,12 +369,11 @@ void render(void)
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	//glBlendFunc(GL_SRC_COLOR, GL_ONE_MINUS_SRC_ALPHA);
 
-
-
 	// Nicolas: rendering of velocity magnitude	from SSB buffer	
 	/*glBindBuffer(GL_SHADER_STORAGE_BUFFER, cU_SSB);
 	glGetBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, NX*NY*sizeof(float), cU_CPU);
 	glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);*/
+
 	glBindBuffer(GL_SHADER_STORAGE_BUFFER, color_SSB);
 	glBindBuffer(GL_COPY_READ_BUFFER, color_SSB_COPY);
 	glCopyBufferSubData(GL_SHADER_STORAGE_BUFFER, GL_COPY_READ_BUFFER, 0, 0, NX * NY * sizeof(float));
@@ -397,12 +400,9 @@ void render(void)
 			glVertex2f(x1 + dx, y1 + dy);
 			glVertex2f(x1, y1 + dy);
 			glEnd();
-			//}
 		}
 	}
 	glEnd();
-
-
 
 	// Nicolas: particles rendering
 	glPointSize(2);
@@ -416,7 +416,6 @@ void render(void)
 	glDisableClientState(GL_COLOR_ARRAY);
 	glDisableClientState(GL_VERTEX_ARRAY);
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
-
 
 	glutSwapBuffers();
 }
@@ -435,6 +434,7 @@ void timerFunction(int data)
 	glutPostRedisplay();
 	glutTimerFunc(10, timerFunction, -1);
 }
+
 void key(unsigned char key, int a, int b)
 {
 	if (int(key) == 27) exit(0);
@@ -453,6 +453,7 @@ void key(unsigned char key, int a, int b)
 		fy2 = fx * sin(angle) + fy * cos(angle);
 	}
 }
+
 /*--------------------- Mouse ---------------------------------------------------------------------------*/
 void Mouse(int button, int state, int x, int y)
 {
@@ -468,6 +469,7 @@ void Mouse(int button, int state, int x, int y)
 			mousedown = 0;
 	}
 }
+
 void Motion(int x, int y)
 {
 	if (mousedown)
