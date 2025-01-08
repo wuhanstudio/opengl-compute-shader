@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 14
 VisualStudioVersion = 14.0.25420.1
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "opengl-compute-shader", "opengl-compute-shader\opengl-compute-shader.vcxproj", "{2C6D3C57-BAF1-45B7-92B5-DF2FED950820}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "hello-gray-scott", "hello-gray-scott\hello-gray-scott.vcxproj", "{2C6D3C57-BAF1-45B7-92B5-DF2FED950820}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
