@@ -23,7 +23,7 @@
 #include <string>
 #include <cmath>
 
-#include <GL/glew.h>
+#include <glad/glad.h>
 #include <GL/glut.h>
 
 const int NX = 280;		// solver grid resolution
@@ -230,6 +230,7 @@ void init_buffers(void)
 	glBindBuffer(GL_SHADER_STORAGE_BUFFER, particles_SSB);
 	glBufferData(GL_SHADER_STORAGE_BUFFER, NUMP * sizeof(p), NULL, GL_STATIC_DRAW);
 	glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
+
 	resetparticles();
 
 	/*---------------------- Initialise LBM vector state as SSB on GPU --------------------------------------*/
@@ -239,7 +240,6 @@ void init_buffers(void)
 	glBufferData(GL_SHADER_STORAGE_BUFFER, NX * NY * sizeof(int), NULL, GL_STATIC_DRAW);
 	updateF();
 	glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
-
 
 	GenerateSSB(color_SSB, NX, NY, 0.0);
 	GenerateSSB(cU_SSB, NX, NY, 0.0);
@@ -287,9 +287,6 @@ void init_buffers(void)
 		i++;
 	}
 
-	//		}
-	//		if(i>=NUMP) break;
-	//	}
 	glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
 
 	/*---------------------- Some bindings ------------------------------------------------------------------*/
@@ -298,22 +295,15 @@ void init_buffers(void)
 	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, cU_SSB);
 	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, cV_SSB);
 	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 5, color_SSB);		// nx*ny
-	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 6, particles_SSB);						// 69
+	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 6, particles_SSB);
 }
 
 void init(void)
 {
 	int i;
 	fx2 = fx; fy2 = fy;		// init force
-	/*--------------------- Initialize GLEW -----------------------------------------------------------------*/
-	GLenum err = glewInit();
-	if (GLEW_OK != err)
-	{
-		fmt::println("Init Error:\n");
-		//fmt::println("Error: {}\n", glewGetErrorString(err));
-		exit(0);
-	}
-	//fmt::println("Status: Using GLEW {}", glewGetString(GLEW_VERSION));
+
+	gladLoadGL();
 	
 	/*-------------------- Compute shaders programs etc. ----------------------------------------------------*/
 	init_shaders();
