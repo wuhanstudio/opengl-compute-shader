@@ -348,7 +348,7 @@ float time_ = 0;
 
 void render(void)
 {
-	// /*
+	 /*
 	if (mousedown) {
 		//glfwSetInputMode(gWindow, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
@@ -368,7 +368,7 @@ void render(void)
 		time_ = time_ + dt;
 		fmt::println("Time: {}", time_);
 	}
-	// */
+	 */
 
 	// computation (!)
 	if (calconoff)
@@ -389,7 +389,7 @@ void render(void)
 	glUseProgram(moveparticlesCS_Program);
 	glDispatchCompute(NUMP / 1000, 1, 1);
 	glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
-	glUniform1f(12, dt);
+	glUniform1f(2, dt);
 
 	// Render
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -453,8 +453,8 @@ void render(void)
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 
 	// Swap front and back buffers
-	//glutSwapBuffers();
-	glfwSwapBuffers(gWindow);
+	glutSwapBuffers();
+	//glfwSwapBuffers(gWindow);
 
 }
 
@@ -632,7 +632,7 @@ bool initOpenGL()
 /*--------------------- Main loop ---------------------------------------------------------------------------*/
 int main(int argc, char** argv)
 {
-	 /*
+	// /*
 	glutInit(&argc, argv);
 	glutInitDisplayMode(GLUT_DEPTH | GLUT_DOUBLE | GLUT_RGBA);
 	glutInitWindowPosition(0, 100);
@@ -650,9 +650,9 @@ int main(int argc, char** argv)
 
 	glutTimerFunc(10, timerFunction, -1);
 	glutMainLoop();
-	*/
+	// */
 
-	// /*
+	 /*
 	initOpenGL();
 	init();
 	lastTime = glfwGetTime();
@@ -668,7 +668,7 @@ int main(int argc, char** argv)
 
 	glfwTerminate();
 	return 0;
-	// */
+	 */
 
 }
 

@@ -25,6 +25,7 @@ layout( binding=2 ) buffer dcF { int F[  ]; };
 layout( binding=3 ) buffer dcU { float U[  ]; };
 layout( binding=4 ) buffer dcV { float V[  ]; };
 layout( binding=5 ) buffer col { float COL[  ]; };
+
 layout(location = 0) uniform int NX;
 layout(location = 1) uniform int NY;
 layout(location = 2) uniform float devFx;
