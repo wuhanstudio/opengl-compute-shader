@@ -9,10 +9,8 @@ find_package(glad CONFIG REQUIRED)
 find_package(glm CONFIG REQUIRED)
 find_package(glfw3 CONFIG REQUIRED)
 find_package(fmt CONFIG REQUIRED)
-
-find_package(GLEW CONFIG REQUIRED)
 find_package(FreeGLUT CONFIG REQUIRED)
 
-add_executable(hello-lbm main.cpp)
+add_executable(hello-lbm main.cpp ShaderProgram.cpp)
 
-target_link_libraries(hello-lbm PRIVATE glm:glm glfw glad::glad fmt::fmt GLEW::GLEW $<IF:$<TARGET_EXISTS:FreeGLUT::freeglut>,FreeGLUT::freeglut,FreeGLUT::freeglut_static>)
+target_link_libraries(hello-lbm PRIVATE glfw glad::glad fmt::fmt glm::glm $<IF:$<TARGET_EXISTS:FreeGLUT::freeglut>,FreeGLUT::freeglut,FreeGLUT::freeglut_static> GLU)
