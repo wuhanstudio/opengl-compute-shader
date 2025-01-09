@@ -48,6 +48,7 @@ const int gWindowHeightFull = 1200;
 bool gWireframe = false;
 
 ShaderProgram shader;
+ShaderProgram particleShader;
 
 double lastTime;
 void showFPS(GLFWwindow* window);
@@ -468,17 +469,24 @@ void render(void)
 	glUseProgram(0);
 
 
+	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, particles_SSB);
+	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, col_SSB);
+
+	particleShader.use();
+	glDrawArrays(GL_POINTS, 0, NUMP); // Render particles
+	glUseProgram(0);
+
 	// Nicolas: particles rendering
-	glPointSize(2);
-	glBindBuffer(GL_ARRAY_BUFFER, particles_SSB);
-	glVertexPointer(2, GL_FLOAT, 0, (void*)0);
-	glEnableClientState(GL_VERTEX_ARRAY);
-	glBindBuffer(GL_ARRAY_BUFFER, col_SSB);
-	glColorPointer(4, GL_FLOAT, 0, (void*)0);
-	glEnableClientState(GL_COLOR_ARRAY);
-	glDrawArrays(GL_POINTS, 0, NUMP);
-	glDisableClientState(GL_COLOR_ARRAY);
-	glDisableClientState(GL_VERTEX_ARRAY);
+	//glPointSize(2);
+	//glBindBuffer(GL_ARRAY_BUFFER, particles_SSB);
+	//glVertexPointer(2, GL_FLOAT, 0, (void*)0);
+	//glEnableClientState(GL_VERTEX_ARRAY);
+	//glBindBuffer(GL_ARRAY_BUFFER, col_SSB);
+	//glColorPointer(4, GL_FLOAT, 0, (void*)0);
+	//glEnableClientState(GL_COLOR_ARRAY);
+	//glDrawArrays(GL_POINTS, 0, NUMP);
+	//glDisableClientState(GL_COLOR_ARRAY);
+	//glDisableClientState(GL_VERTEX_ARRAY);
 
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 
@@ -674,6 +682,7 @@ int main(int argc, char** argv)
 
 	// Load the vertex and fragment shaders for rendering the results
 	shader.loadShaders("shaders/vert.glsl", "shaders/frag.glsl");
+	particleShader.loadShaders("shaders/vert_particle.glsl", "shaders/frag_particle.glsl");
 
 	glutDisplayFunc(render);
 

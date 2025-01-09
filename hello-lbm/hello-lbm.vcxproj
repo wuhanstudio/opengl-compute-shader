@@ -136,9 +136,11 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="shaders\frag.glsl" />
+    <None Include="shaders\frag_particle.glsl" />
     <None Include="shaders\lbm.cs" />
     <None Include="shaders\particles.cs" />
     <None Include="shaders\vert.glsl" />
+    <None Include="shaders\vert_particle.glsl" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ShaderProgram.h" />

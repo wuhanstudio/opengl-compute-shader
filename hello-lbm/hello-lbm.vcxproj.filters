@@ -35,6 +35,12 @@
     <None Include="shaders\vert.glsl">
       <Filter>Shader Files</Filter>
     </None>
+    <None Include="shaders\frag_particle.glsl">
+      <Filter>Shader Files</Filter>
+    </None>
+    <None Include="shaders\vert_particle.glsl">
+      <Filter>Shader Files</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ShaderProgram.h">
