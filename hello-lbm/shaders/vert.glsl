@@ -1,8 +1,6 @@
-#version 330 core
+#version 450 core
 
 layout (location = 0) in vec2 in_position;
-
-out vec2 TexCoords;
 
 void main()
 {

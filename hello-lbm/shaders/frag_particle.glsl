@@ -1,4 +1,4 @@
-#version 460 core
+#version 450 core
 
 in vec4 vColor;       // Interpolated color from vertex shader
 out vec4 FragColor;   // Final fragment color

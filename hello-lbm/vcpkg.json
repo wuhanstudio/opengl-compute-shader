@@ -4,7 +4,6 @@
         "glad",
         "glfw3",
         "glm",
-        "fmt",
-        "freeglut"
+        "fmt"
     ]
 }

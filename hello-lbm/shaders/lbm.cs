@@ -1,5 +1,5 @@
 // http://panoramix.ift.uni.wroc.pl/~maq/eng/
-#version 460 compatibility
+#version 450 compatibility
 //#extension GL_ARB_compute_shader : enable
 //#extension GL_ARB_shader_storage_buffer_object : enable
 
@@ -78,9 +78,6 @@ void main()
 			jp=per(jp,NY-1);
 			int idxp =  ip+jp*NX;
 
-            // compute feq
-
-
             //Compute the non equilibrium part of the distribution functions
             //fi_neq = fi - fi_eq
 
@@ -88,7 +85,6 @@ void main()
             //fneq[k] = f0[idx*NUM_VECTORS+k]*ex[k] - feq[k];
         }
 
-    
         OMEGAS = 1.0/tau;
 
 		for(int k=0; k<9; k++)		// collision + streaming (the main solver is here, really)
@@ -105,10 +101,5 @@ void main()
 			else
 				f1[ idxp*NUM_VECTORS + k] = (1-OMEGAS) * f0[idx*NUM_VECTORS+k] + OMEGAS * feq[k];//omega * feq[k];
 		}
-     
 	}
-
-
-
 }
-

@@ -1,4 +1,4 @@
-#version 460 core
+#version 450 core
 
 out vec4 vColor; // Output color to the fragment shader
 

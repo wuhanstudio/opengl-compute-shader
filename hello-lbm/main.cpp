@@ -23,8 +23,6 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
-#include <GL/glut.h>
-
 #include "ShaderProgram.h"
 
 #define NUMR 20
@@ -319,8 +317,6 @@ void init_buffers(void)
 	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, cV_SSB);
 	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 5, color_SSB);		// nx*ny
 	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 6, particles_SSB);
-
-	fmt::println("Buffers initialized");
 }
 
 void init(void)
@@ -338,21 +334,11 @@ void glfw_onFramebufferSize(GLFWwindow* window, int width, int height)
 	glViewport(0, 0, width, height);
 }
 
-void redisplay(int w, int h)
-{
-	glMatrixMode(GL_PROJECTION);
-	glLoadIdentity();
-	glViewport(0, 0, w, h);
-	gluOrtho2D(0, 1, 0, 1);
-	glMatrixMode(GL_MODELVIEW);
-}
-
 int c = 0;
 float time_ = 0;
 
 void render(void)
 {
-	 /*
 	if (mousedown) {
 		//glfwSetInputMode(gWindow, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
@@ -362,21 +348,14 @@ void render(void)
 
 		xMouse = 2.0 * ((float)lastMouseX / (float)gWindowWidth - 0.5);
 		yMouse = -2.0 * ((float)lastMouseY / (float)gWindowHeight - 0.5);
-
 		updateF();
-
-		fmt::println("Mouse: {}, {}", xMouse, yMouse);
 	}
-	 */
 
-	 /*
 	if ((glfwGetTime() - lastTime) > dt / 10)
 	{
 		lastTime = glfwGetTime();
 		time_ = time_ + dt;
-		fmt::println("Time: {}", time_);
 	}
-	 */
 
 	// computation (!)
 	if (calconoff)
@@ -421,13 +400,13 @@ void render(void)
 
 			if (F_cpu[idx] == 0) {
 				// Define quad vertices and color
-				vertices.insert(vertices.end(), 
-				{
-					x1, y1,
-					x1 + dx, y1,
-					x1 + dx, y1 + dy,
-					x1, y1 + dy
-				});
+				vertices.insert(vertices.end(),
+					{
+						x1, y1,
+						x1 + dx, y1,
+						x1 + dx, y1 + dy,
+						x1, y1 + dy
+					});
 			}
 		}
 	}
@@ -456,41 +435,10 @@ void render(void)
 	glBindVertexArray(0);
 	glUseProgram(0);
 
-	// Nicolas: particles rendering
-	//glPointSize(2);
-	//glBindBuffer(GL_ARRAY_BUFFER, particles_SSB);
-	//glVertexPointer(2, GL_FLOAT, 0, (void*)0);
-	//glEnableClientState(GL_VERTEX_ARRAY);
-	//glBindBuffer(GL_ARRAY_BUFFER, col_SSB);
-	//glColorPointer(4, GL_FLOAT, 0, (void*)0);
-	//glEnableClientState(GL_COLOR_ARRAY);
-	//glDrawArrays(GL_POINTS, 0, NUMP);
-	//glDisableClientState(GL_COLOR_ARRAY);
-	//glDisableClientState(GL_VERTEX_ARRAY);
-
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 
-	// Swap front and back buffers
-	glutSwapBuffers();
-
-	//glfwSwapBuffers(gWindow);
-	//glfwPollEvents();
-}
-
-void idleFunction(void)
-{
-
-}
-
-void timerFunction(int data)
-{
-	if (mousedown)
-		updateF();
-
-	time_ = time_ + dt;
-
-	glutPostRedisplay();
-	glutTimerFunc(10, timerFunction, -1);
+	glfwSwapBuffers(gWindow);
+	glfwPollEvents();
 }
 
 void glfw_onKey(GLFWwindow* window, int key, int scancode, int action, int mode)
@@ -518,49 +466,6 @@ void glfw_onKey(GLFWwindow* window, int key, int scancode, int action, int mode)
 		angle += 2 * 3.14 / 180.0;
 		fx2 = fx * cos(angle) - fy * sin(angle);
 		fy2 = fx * sin(angle) + fy * cos(angle);
-	}
-}
-
-void key(unsigned char key, int a, int b)
-{
-	if (int(key) == 27) exit(0);
-	if (key == 'c')	calconoff = 1 - calconoff;
-	if (key == 'd')	dt = -dt;
-	if (key == ' ') { resetparticles(); }
-	if (key == '+') { force *= (-1); }
-	if (key == '-') { force *= 0.98; }
-
-	if (key == 'r')
-	{
-		angle += 2 * 3.14 / 180.0;
-		fx2 = fx * cos(angle) - fy * sin(angle);
-		fy2 = fx * sin(angle) + fy * cos(angle);
-	}
-}
-
-/*--------------------- Mouse ---------------------------------------------------------------------------*/
-void Mouse(int button, int state, int x, int y)
-{
-	if (button == GLUT_LEFT_BUTTON)
-	{
-		if (state == GLUT_DOWN)
-		{
-			mousedown = 1;
-			xMouse = 2.0 * ((float)x / (float)gWindowWidth - 0.5);
-			yMouse = -2.0 * ((float)y / (float)gWindowHeight - 0.5);
-		}
-		else if (state == GLUT_UP)
-			mousedown = 0;
-	}
-}
-
-void Motion(int x, int y)
-{
-	if (mousedown)
-	{
-		xMouse = 2.0 * ((float)x / (float)gWindowWidth - 0.5);
-		yMouse = -2.0 * ((float)y / (float)gWindowHeight - 0.5);
-		glutPostRedisplay();
 	}
 }
 
@@ -593,15 +498,14 @@ bool initOpenGL()
 
 	// Set the OpenGL version
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
-	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 5);
+	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_COMPAT_PROFILE);
 	glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);	// forward compatible with newer versions of OpenGL as they become available but not backward compatible (it will not run on devices that do not support OpenGL 3.3
 
 	glfwWindowHint(GLFW_RED_BITS, 8);		// Red channel bits
 	glfwWindowHint(GLFW_GREEN_BITS, 8);		// Green channel bits
 	glfwWindowHint(GLFW_BLUE_BITS, 8);		// Blue channel bits
 	glfwWindowHint(GLFW_ALPHA_BITS, 8);		// Alpha channel bits
-	//glfwWindowHint(GLFW_DEPTH_BITS, 24);		// Depth of the depth buffer
 
 	// Create a window
 	if (FULLSCREEN)
@@ -625,13 +529,7 @@ bool initOpenGL()
 	glfwSetKeyCallback(gWindow, glfw_onKey);
 	glfwSetMouseButtonCallback(gWindow, mouse_button_callback);
 	glfwSetFramebufferSizeCallback(gWindow, glfw_onFramebufferSize);
-	//glfwSetScrollCallback(gWindow, glfw_onMouseScroll);
-
-	// Hides and grabs cursor, unlimited movement
-	//glfwSetInputMode(gWindow, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 	glfwSetCursorPos(gWindow, gWindowWidth / 2.0, gWindowHeight / 2.0);
-
-	glClearColor(0.23f, 0.38f, 0.47f, 1.0f);
 
 	if (FULLSCREEN)
 		glViewport(0, 0, gWindowWidthFull, gWindowHeightFull);
@@ -647,28 +545,6 @@ bool initOpenGL()
 int main(int argc, char** argv)
 {
 
-	// /*
-	glutInit(&argc, argv);
-	glutInitDisplayMode(GLUT_DEPTH | GLUT_DOUBLE | GLUT_RGBA);
-	glutInitWindowPosition(0, 100);
-	glutInitWindowSize(gWindowWidth, gWindowHeight);
-	glutCreateWindow("Bomb");
-
-	gladLoadGL();
-	init();
-
-	glutDisplayFunc(render);
-
-	glutKeyboardFunc(key);
-	glutMouseFunc(Mouse);
-	glutMotionFunc(Motion);
-	glutReshapeFunc(redisplay);
-
-	glutTimerFunc(10, timerFunction, -1);
-	glutMainLoop();
-	//  */
-
-	 /*
 	if (!initOpenGL())
 	{
 		fmt::println("GLFW initialization failed");
@@ -685,7 +561,6 @@ int main(int argc, char** argv)
 
 	glfwTerminate();
 	return 0;
-	 */
 }
 
 void showFPS(GLFWwindow* window) {
