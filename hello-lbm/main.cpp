@@ -18,11 +18,7 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
-
-#include <cstdio>
-#include <cstdlib>
 #include <string>
-#include <cmath>
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
@@ -30,6 +26,10 @@
 #include <GL/glut.h>
 
 #include "ShaderProgram.h"
+
+#define NUMR 20
+
+GLuint VAO, VBO;
 
 // Set to true to enable fullscreen
 bool FULLSCREEN = false;
@@ -56,10 +56,6 @@ void showFPS(GLFWwindow* window);
 const int NX = 280;		// solver grid resolution
 const int NY = 160;
 
-const float SCALE = 1;
-const int SCRWIDTH = gWindowWidth * SCALE;		// screen size
-const int SCRHEIGHT = gWindowHeight * SCALE;		// screen size y
-
 /*--------------------- Mouse ---------------------------------------------------------------------------*/
 int mousedown = 0;
 float xMouse, yMouse;
@@ -75,17 +71,17 @@ float force = -0.000007;// 5;		// body force magnitude
 
 /*--------------------- LBM State vector ----------------------------------------------------------------*/
 #define NUM_VECTORS 9		// lbm basis vectors (d2q9 model)
+
 GLuint col_SSB;
 GLuint cF_SSB;
 GLuint cU_SSB;
-//GLuint cU_SSB_COPY;
 GLuint cV_SSB;
+
 GLuint c0_SSB;
 GLuint c1_SSB;
+
 GLuint color_SSB;
-GLuint color_SSB_COPY;
 int F_cpu[NX * NY];
-float* color_CPU = new float[NX * NY];
 
 /*--------------------- Particles -----------------------------------------------------------------------*/
 float dt = 0.1;
@@ -245,6 +241,14 @@ void init_shaders(void)
 	glUniform1i(0, NX);
 	glUniform1i(1, NY);
 	glUseProgram(0);
+
+	// Create VAO and VBOs
+	glGenVertexArrays(1, &VAO);
+	glGenBuffers(1, &VBO);
+
+	// Load the vertex and fragment shaders for rendering the results
+	shader.loadShaders("shaders/vert.glsl", "shaders/frag.glsl");
+	particleShader.loadShaders("shaders/vert_particle.glsl", "shaders/frag_particle.glsl");
 }
 
 void init_buffers(void)
@@ -258,7 +262,6 @@ void init_buffers(void)
 	resetparticles();
 
 	/*---------------------- Initialise LBM vector state as SSB on GPU --------------------------------------*/
-
 	glGenBuffers(1, &cF_SSB);
 	glBindBuffer(GL_SHADER_STORAGE_BUFFER, cF_SSB);
 	glBufferData(GL_SHADER_STORAGE_BUFFER, NX * NY * sizeof(int), NULL, GL_STATIC_DRAW);
@@ -268,8 +271,6 @@ void init_buffers(void)
 	GenerateSSB(color_SSB, NX, NY, 0.0);
 	GenerateSSB(cU_SSB, NX, NY, 0.0);
 	GenerateSSB(cV_SSB, NX, NY, 0.0);
-
-	GenerateCOPY(color_SSB_COPY, NX, NY, 0.0);
 
 	float w[] = { (4.0 / 9.0),(1.0 / 9.0),(1.0 / 9.0),(1.0 / 9.0),(1.0 / 9.0),(1.0 / 36.0),(1.0 / 36.0),(1.0 / 36.0),(1.0 / 36.0) };
 
@@ -293,7 +294,6 @@ void init_buffers(void)
 				temp[k + x * NUM_VECTORS + y * NX * NUM_VECTORS] = w[k];
 	glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
 
-
 	glGenBuffers(1, &col_SSB);
 	glBindBuffer(GL_SHADER_STORAGE_BUFFER, col_SSB);
 	glBufferData(GL_SHADER_STORAGE_BUFFER, NUMP * sizeof(struct col), NULL, GL_STATIC_DRAW);
@@ -314,7 +314,6 @@ void init_buffers(void)
 	glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
 
 	/*---------------------- Some bindings ------------------------------------------------------------------*/
-
 	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, cF_SSB);
 	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, cU_SSB);
 	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, cV_SSB);
@@ -347,10 +346,9 @@ void redisplay(int w, int h)
 	gluOrtho2D(0, 1, 0, 1);
 	glMatrixMode(GL_MODELVIEW);
 }
+
 int c = 0;
 float time_ = 0;
-
-#define NUMR 20 //40
 
 void render(void)
 {
@@ -362,13 +360,17 @@ void render(void)
 		// Get the current mouse cursor position delta
 		glfwGetCursorPos(gWindow, &lastMouseX, &lastMouseY);
 
-		xMouse = 2.0 * ((float)lastMouseX / (float)SCRWIDTH - 0.5);
-		yMouse = -2.0 * ((float)lastMouseY / (float)SCRHEIGHT - 0.5);
+		xMouse = 2.0 * ((float)lastMouseX / (float)gWindowWidth - 0.5);
+		yMouse = -2.0 * ((float)lastMouseY / (float)gWindowHeight - 0.5);
 
 		updateF();
-	}
 
-	if ((glfwGetTime() - lastTime) > dt)
+		fmt::println("Mouse: {}, {}", xMouse, yMouse);
+	}
+	 */
+
+	 /*
+	if ((glfwGetTime() - lastTime) > dt / 10)
 	{
 		lastTime = glfwGetTime();
 		time_ = time_ + dt;
@@ -389,6 +391,7 @@ void render(void)
 			glUniform1f(3, fy2 * force);
 			glDispatchCompute(NX / 10, NY / 10, 1);
 			glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+			glUseProgram(0);
 		}
 	}
 
@@ -396,35 +399,17 @@ void render(void)
 	glDispatchCompute(NUMP / 1000, 1, 1);
 	glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 	glUniform1f(2, dt);
+	glUseProgram(0);
 
 	// Render
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	glClear(GL_COLOR_BUFFER_BIT);
 
-	glLoadIdentity();
 	glEnable(GL_POINT_SMOOTH);
-
-	glColor4f(0.8, 0.1, 0, 0.1);
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
 	//glBlendFunc(GL_SRC_COLOR, GL_ONE_MINUS_SRC_ALPHA);
 
-	// Nicolas: rendering of velocity magnitude	from SSB buffer	
-	//glBindBuffer(GL_SHADER_STORAGE_BUFFER, cU_SSB);
-	//glGetBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, NX*NY*sizeof(float), cU_CPU);
-	//glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
-
-	glBindBuffer(GL_SHADER_STORAGE_BUFFER, color_SSB);
-	glBindBuffer(GL_COPY_READ_BUFFER, color_SSB_COPY);
-	glCopyBufferSubData(GL_SHADER_STORAGE_BUFFER, GL_COPY_READ_BUFFER, 0, 0, NX * NY * sizeof(float));
-	glBindBuffer(GL_COPY_READ_BUFFER, color_SSB_COPY);
-	glGetBufferSubData(GL_COPY_READ_BUFFER, 0, NX * NY * sizeof(float), color_CPU);
-	glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
-	glBindBuffer(GL_COPY_READ_BUFFER, 0);
-
-	GLuint VAO, VBO;
 	std::vector<float> vertices;
-
 	for (int x = 0; x < NX; x++) {
 		for (int y = 0; y < NY; y++) {
 			int idx = x + y * NX;
@@ -436,44 +421,39 @@ void render(void)
 
 			if (F_cpu[idx] == 0) {
 				// Define quad vertices and color
-				vertices.insert(vertices.end(), {
+				vertices.insert(vertices.end(), 
+				{
 					x1, y1,
 					x1 + dx, y1,
 					x1 + dx, y1 + dy,
 					x1, y1 + dy
-					}
-				);
+				});
 			}
 		}
 	}
 
-	// Create VAO and VBOs
-	glGenVertexArrays(1, &VAO);
-	glGenBuffers(1, &VBO);
-
-	// Bind VAO
+	// Bind VAO VBO
 	glBindVertexArray(VAO);
-
-	// Position VBO
 	glBindBuffer(GL_ARRAY_BUFFER, VBO);
-	glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float), vertices.data(), GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float), vertices.data(), GL_DYNAMIC_DRAW);
 	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, (void*)0);
 	glEnableVertexAttribArray(0);
-
 	glBindVertexArray(0);
 
+	// Render obstacles
 	shader.use();
 	glBindVertexArray(VAO);
 	glDrawArrays(GL_QUADS, 0, vertices.size() / 2);
 	glBindVertexArray(0);
 	glUseProgram(0);
 
-
+	// Render particles
 	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, particles_SSB);
 	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, col_SSB);
 
 	particleShader.use();
 	glDrawArrays(GL_POINTS, 0, NUMP); // Render particles
+	glBindVertexArray(0);
 	glUseProgram(0);
 
 	// Nicolas: particles rendering
@@ -492,8 +472,9 @@ void render(void)
 
 	// Swap front and back buffers
 	glutSwapBuffers();
-	//glfwSwapBuffers(gWindow);
 
+	//glfwSwapBuffers(gWindow);
+	//glfwPollEvents();
 }
 
 void idleFunction(void)
@@ -565,8 +546,8 @@ void Mouse(int button, int state, int x, int y)
 		if (state == GLUT_DOWN)
 		{
 			mousedown = 1;
-			xMouse = 2.0 * ((float)x / (float)SCRWIDTH - 0.5);
-			yMouse = -2.0 * ((float)y / (float)SCRHEIGHT - 0.5);
+			xMouse = 2.0 * ((float)x / (float)gWindowWidth - 0.5);
+			yMouse = -2.0 * ((float)y / (float)gWindowHeight - 0.5);
 		}
 		else if (state == GLUT_UP)
 			mousedown = 0;
@@ -577,8 +558,8 @@ void Motion(int x, int y)
 {
 	if (mousedown)
 	{
-		xMouse = 2.0 * ((float)x / (float)SCRWIDTH - 0.5);
-		yMouse = -2.0 * ((float)y / (float)SCRHEIGHT - 0.5);
+		xMouse = 2.0 * ((float)x / (float)gWindowWidth - 0.5);
+		yMouse = -2.0 * ((float)y / (float)gWindowHeight - 0.5);
 		glutPostRedisplay();
 	}
 }
@@ -591,12 +572,7 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
 		if (GLFW_PRESS == action)
 		{
 			mousedown = 1;
-
-			// Get the current mouse cursor position delta
 			glfwGetCursorPos(gWindow, &lastMouseX, &lastMouseY);
-
-			xMouse = 2.0 * ((float)lastMouseX / (float)SCRWIDTH - 0.5);
-			yMouse = -2.0 * ((float)lastMouseY / (float)SCRHEIGHT - 0.5);
 		}
 		else if (GLFW_RELEASE == action)
 			mousedown = 0;
@@ -662,7 +638,7 @@ bool initOpenGL()
 	else
 		glViewport(0, 0, gWindowWidth, gWindowHeight);
 
-	glEnable(GL_DEPTH_TEST);
+	init();
 
 	return true;
 }
@@ -670,19 +646,16 @@ bool initOpenGL()
 /*--------------------- Main loop ---------------------------------------------------------------------------*/
 int main(int argc, char** argv)
 {
+
 	// /*
 	glutInit(&argc, argv);
 	glutInitDisplayMode(GLUT_DEPTH | GLUT_DOUBLE | GLUT_RGBA);
 	glutInitWindowPosition(0, 100);
-	glutInitWindowSize(SCRWIDTH, SCRHEIGHT);
+	glutInitWindowSize(gWindowWidth, gWindowHeight);
 	glutCreateWindow("Bomb");
 
 	gladLoadGL();
 	init();
-
-	// Load the vertex and fragment shaders for rendering the results
-	shader.loadShaders("shaders/vert.glsl", "shaders/frag.glsl");
-	particleShader.loadShaders("shaders/vert_particle.glsl", "shaders/frag_particle.glsl");
 
 	glutDisplayFunc(render);
 
@@ -693,26 +666,26 @@ int main(int argc, char** argv)
 
 	glutTimerFunc(10, timerFunction, -1);
 	glutMainLoop();
-	// */
+	//  */
 
 	 /*
-	initOpenGL();
-	init();
-	lastTime = glfwGetTime();
+	if (!initOpenGL())
+	{
+		fmt::println("GLFW initialization failed");
+		return -1;
+	}
+
+	lastTime = (GLfloat)glfwGetTime();
+
 	while (!glfwWindowShouldClose(gWindow))
 	{
 		showFPS(gWindow);
-
 		render();
-
-		// Poll for and process events
-		glfwPollEvents();
 	}
 
 	glfwTerminate();
 	return 0;
 	 */
-
 }
 
 void showFPS(GLFWwindow* window) {
@@ -729,7 +702,7 @@ void showFPS(GLFWwindow* window) {
 		double msPerFrame = 1000.0 / fps;
 
 		char title[80];
-		std::snprintf(title, sizeof(title), "Hello ImGUI @ fps: %.2f, ms/frame: %.2f", fps, msPerFrame);
+		std::snprintf(title, sizeof(title), "Hello LBM @ fps: %.2f, ms/frame: %.2f", fps, msPerFrame);
 		glfwSetWindowTitle(window, title);
 
 		frameCount = 0;
