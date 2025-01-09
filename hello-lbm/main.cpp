@@ -13,6 +13,7 @@
 // 1-fluid,0-boundary
 
 #include <fmt/core.h>
+#include <vector>
 
 #include <iostream>
 #include <fstream>
@@ -27,6 +28,8 @@
 #include <GLFW/glfw3.h>
 
 #include <GL/glut.h>
+
+#include "ShaderProgram.h"
 
 // Set to true to enable fullscreen
 bool FULLSCREEN = false;
@@ -43,6 +46,8 @@ const int gWindowWidthFull = 1920;
 const int gWindowHeightFull = 1200;
 
 bool gWireframe = false;
+
+ShaderProgram shader;
 
 double lastTime;
 void showFPS(GLFWwindow* window);
@@ -416,27 +421,52 @@ void render(void)
 	glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 	glBindBuffer(GL_COPY_READ_BUFFER, 0);
 
-	for (int x = 0; x < NX; x++)
-	{
-		for (int y = 0; y < NY; y++)
-		{
-			int idx = x + y * NX;
-			float c = color_CPU[idx];
-			if (F_cpu[idx] == 0) { c = 0.24; }
-			glColor4f(c, c, c, 1);
-			float x1 = (float)x / (float)NX;
-			float y1 = (float)y / (float)NY;
-			float dx = 1.0 / (float)NX;
-			float dy = 1.0 / (float)NY;
+	GLuint VAO, VBO;
+	std::vector<float> vertices;
 
-			glBegin(GL_QUADS);
-				glVertex2f(x1, y1);
-				glVertex2f(x1 + dx, y1);
-				glVertex2f(x1 + dx, y1 + dy);
-				glVertex2f(x1, y1 + dy);
-			glEnd();
+	for (int x = 0; x < NX; x++) {
+		for (int y = 0; y < NY; y++) {
+			int idx = x + y * NX;
+
+			float x1 = static_cast<float>(x) / NX * 2.0 - 1.0;
+			float y1 = static_cast<float>(y) / NY * 2.0 - 1.0;
+			float dx = 1.0f / NX * 2.0;
+			float dy = 1.0f / NY * 2.0;
+
+			if (F_cpu[idx] == 0) {
+				// Define quad vertices and color
+				vertices.insert(vertices.end(), {
+					x1, y1,
+					x1 + dx, y1,
+					x1 + dx, y1 + dy,
+					x1, y1 + dy
+					}
+				);
+			}
 		}
 	}
+
+	// Create VAO and VBOs
+	glGenVertexArrays(1, &VAO);
+	glGenBuffers(1, &VBO);
+
+	// Bind VAO
+	glBindVertexArray(VAO);
+
+	// Position VBO
+	glBindBuffer(GL_ARRAY_BUFFER, VBO);
+	glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float), vertices.data(), GL_STATIC_DRAW);
+	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, (void*)0);
+	glEnableVertexAttribArray(0);
+
+	glBindVertexArray(0);
+
+	shader.use();
+	glBindVertexArray(VAO);
+	glDrawArrays(GL_QUADS, 0, vertices.size() / 2);
+	glBindVertexArray(0);
+	glUseProgram(0);
+
 
 	// Nicolas: particles rendering
 	glPointSize(2);
@@ -641,6 +671,10 @@ int main(int argc, char** argv)
 
 	gladLoadGL();
 	init();
+
+	// Load the vertex and fragment shaders for rendering the results
+	shader.loadShaders("shaders/vert.glsl", "shaders/frag.glsl");
+
 	glutDisplayFunc(render);
 
 	glutKeyboardFunc(key);
