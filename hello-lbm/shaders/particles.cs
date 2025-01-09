@@ -19,9 +19,11 @@ layout(  binding=6 ) buffer ParticlesPos
 layout( binding=2 ) buffer dcF { int F[  ]; };
 layout( binding=3 ) buffer dcU { float dU[  ]; };
 layout( binding=4 ) buffer dcV { float dV[  ]; };
-layout(location = 0) uniform int NX;
-layout(location = 1) uniform int NY;
-layout( location=12) uniform float DT;
+
+layout( location = 0 ) uniform int NX;
+layout( location = 1 ) uniform int NY;
+layout( location=12 ) uniform float DT;
+
 layout( local_size_x = 1000 ) in;
 
 float rand(vec2 co){

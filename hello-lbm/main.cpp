@@ -24,23 +24,42 @@
 #include <cmath>
 
 #include <glad/glad.h>
+#include <GLFW/glfw3.h>
+
 #include <GL/glut.h>
+
+// Set to true to enable fullscreen
+bool FULLSCREEN = false;
+
+GLFWwindow* gWindow = NULL;
+const char* APP_TITLE = "Hello LBM";
+
+// Window dimensions
+const int gWindowWidth = 1280;
+const int gWindowHeight = 720;
+
+// Fullscreen dimensions
+const int gWindowWidthFull = 1920;
+const int gWindowHeightFull = 1200;
+
+bool gWireframe = false;
+
+double lastTime;
+void showFPS(GLFWwindow* window);
 
 const int NX = 280;		// solver grid resolution
 const int NY = 160;
 
 const float SCALE = 1;
-const int SCRWIDTH = 1280 * SCALE;		// screen size
-const int SCRHEIGHT = 720 * SCALE;		// screen size y
+const int SCRWIDTH = gWindowWidth * SCALE;		// screen size
+const int SCRHEIGHT = gWindowHeight * SCALE;		// screen size y
 
 /*--------------------- Mouse ---------------------------------------------------------------------------*/
 int mousedown = 0;
 float xMouse, yMouse;
 
 /*--------------------- On offs -------------------------------------------------------------------------*/
-int moveonoff = 1;
 int calconoff = 1;
-int clearonoff = 1;
 
 /*--------------------- LBM -----------------------------------------------------------------------------*/
 float fx = 1, fx2 = 1;
@@ -147,7 +166,6 @@ void updateF(void)
 
 	for (int x = 0; x < NX; x++)
 		F_temp[x + 0 * NX] = F_temp[x + (NY - 1) * NX] = 0;
-
 
 	glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
 }
@@ -296,6 +314,8 @@ void init_buffers(void)
 	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, cV_SSB);
 	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 5, color_SSB);		// nx*ny
 	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 6, particles_SSB);
+
+	fmt::println("Buffers initialized");
 }
 
 void init(void)
@@ -303,11 +323,14 @@ void init(void)
 	int i;
 	fx2 = fx; fy2 = fy;		// init force
 
-	gladLoadGL();
-	
 	/*-------------------- Compute shaders programs etc. ----------------------------------------------------*/
 	init_shaders();
 	init_buffers();
+}
+
+void glfw_onFramebufferSize(GLFWwindow* window, int width, int height)
+{
+	glViewport(0, 0, width, height);
 }
 
 void redisplay(int w, int h)
@@ -325,6 +348,28 @@ float time_ = 0;
 
 void render(void)
 {
+	// /*
+	if (mousedown) {
+		//glfwSetInputMode(gWindow, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+
+		double lastMouseX, lastMouseY;
+		// Get the current mouse cursor position delta
+		glfwGetCursorPos(gWindow, &lastMouseX, &lastMouseY);
+
+		xMouse = 2.0 * ((float)lastMouseX / (float)SCRWIDTH - 0.5);
+		yMouse = -2.0 * ((float)lastMouseY / (float)SCRHEIGHT - 0.5);
+
+		updateF();
+	}
+
+	if ((glfwGetTime() - lastTime) > dt)
+	{
+		lastTime = glfwGetTime();
+		time_ = time_ + dt;
+		fmt::println("Time: {}", time_);
+	}
+	// */
+
 	// computation (!)
 	if (calconoff)
 	{
@@ -346,23 +391,22 @@ void render(void)
 	glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 	glUniform1f(12, dt);
 
-	// render 
-	glClearColor(1, 1, 1, 1);
+	// Render
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	if (clearonoff)
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glLoadIdentity();
 	glEnable(GL_POINT_SMOOTH);
 
 	glColor4f(0.8, 0.1, 0, 0.1);
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
 	//glBlendFunc(GL_SRC_COLOR, GL_ONE_MINUS_SRC_ALPHA);
 
 	// Nicolas: rendering of velocity magnitude	from SSB buffer	
-	/*glBindBuffer(GL_SHADER_STORAGE_BUFFER, cU_SSB);
-	glGetBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, NX*NY*sizeof(float), cU_CPU);
-	glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);*/
+	//glBindBuffer(GL_SHADER_STORAGE_BUFFER, cU_SSB);
+	//glGetBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, NX*NY*sizeof(float), cU_CPU);
+	//glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 
 	glBindBuffer(GL_SHADER_STORAGE_BUFFER, color_SSB);
 	glBindBuffer(GL_COPY_READ_BUFFER, color_SSB_COPY);
@@ -384,15 +428,15 @@ void render(void)
 			float y1 = (float)y / (float)NY;
 			float dx = 1.0 / (float)NX;
 			float dy = 1.0 / (float)NY;
+
 			glBegin(GL_QUADS);
-			glVertex2f(x1, y1);
-			glVertex2f(x1 + dx, y1);
-			glVertex2f(x1 + dx, y1 + dy);
-			glVertex2f(x1, y1 + dy);
+				glVertex2f(x1, y1);
+				glVertex2f(x1 + dx, y1);
+				glVertex2f(x1 + dx, y1 + dy);
+				glVertex2f(x1, y1 + dy);
 			glEnd();
 		}
 	}
-	glEnd();
 
 	// Nicolas: particles rendering
 	glPointSize(2);
@@ -405,9 +449,13 @@ void render(void)
 	glDrawArrays(GL_POINTS, 0, NUMP);
 	glDisableClientState(GL_COLOR_ARRAY);
 	glDisableClientState(GL_VERTEX_ARRAY);
+
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 
-	glutSwapBuffers();
+	// Swap front and back buffers
+	//glutSwapBuffers();
+	glfwSwapBuffers(gWindow);
+
 }
 
 void idleFunction(void)
@@ -421,16 +469,43 @@ void timerFunction(int data)
 		updateF();
 
 	time_ = time_ + dt;
+
 	glutPostRedisplay();
 	glutTimerFunc(10, timerFunction, -1);
+}
+
+void glfw_onKey(GLFWwindow* window, int key, int scancode, int action, int mode)
+{
+	if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
+		glfwSetWindowShouldClose(window, GL_TRUE);
+
+	if (key == GLFW_KEY_1 && action == GLFW_PRESS)
+	{
+		gWireframe = !gWireframe;
+		if (gWireframe)
+			glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+		else
+			glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+	}
+
+	if (key == GLFW_KEY_C)	calconoff = 1 - calconoff;
+	if (key == GLFW_KEY_D)	dt = -dt;
+	if (key == GLFW_KEY_SPACE) { resetparticles(); }
+	if (key == GLFW_KEY_KP_ADD) { force *= (-1); }
+	if (key == GLFW_KEY_KP_SUBTRACT) { force *= 0.98; }
+
+	if (key == GLFW_KEY_R)
+	{
+		angle += 2 * 3.14 / 180.0;
+		fx2 = fx * cos(angle) - fy * sin(angle);
+		fy2 = fx * sin(angle) + fy * cos(angle);
+	}
 }
 
 void key(unsigned char key, int a, int b)
 {
 	if (int(key) == 27) exit(0);
-	if (key == 'm')	moveonoff = 1 - moveonoff;
 	if (key == 'c')	calconoff = 1 - calconoff;
-	if (key == 'v') clearonoff = 1 - clearonoff;
 	if (key == 'd')	dt = -dt;
 	if (key == ' ') { resetparticles(); }
 	if (key == '+') { force *= (-1); }
@@ -470,21 +545,152 @@ void Motion(int x, int y)
 	}
 }
 
-/*--------------------- Main loop ---------------------------------------------------------------------------*/
+void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
+{
+	double lastMouseX, lastMouseY;
+	if (button == GLFW_MOUSE_BUTTON_LEFT)
+	{
+		if (GLFW_PRESS == action)
+		{
+			mousedown = 1;
 
+			// Get the current mouse cursor position delta
+			glfwGetCursorPos(gWindow, &lastMouseX, &lastMouseY);
+
+			xMouse = 2.0 * ((float)lastMouseX / (float)SCRWIDTH - 0.5);
+			yMouse = -2.0 * ((float)lastMouseY / (float)SCRHEIGHT - 0.5);
+		}
+		else if (GLFW_RELEASE == action)
+			mousedown = 0;
+	}
+}
+
+//-----------------------------------------------------------------------------
+// Initialize GLFW and OpenGL
+//-----------------------------------------------------------------------------
+bool initOpenGL()
+{
+	// Intialize GLFW 
+	if (!glfwInit())
+	{
+		fmt::println("GLFW initialization failed");
+		return false;
+	}
+
+	// Set the OpenGL version
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
+	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+	glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);	// forward compatible with newer versions of OpenGL as they become available but not backward compatible (it will not run on devices that do not support OpenGL 3.3
+
+	glfwWindowHint(GLFW_RED_BITS, 8);		// Red channel bits
+	glfwWindowHint(GLFW_GREEN_BITS, 8);		// Green channel bits
+	glfwWindowHint(GLFW_BLUE_BITS, 8);		// Blue channel bits
+	glfwWindowHint(GLFW_ALPHA_BITS, 8);		// Alpha channel bits
+	//glfwWindowHint(GLFW_DEPTH_BITS, 24);		// Depth of the depth buffer
+
+	// Create a window
+	if (FULLSCREEN)
+		gWindow = glfwCreateWindow(gWindowWidthFull, gWindowHeightFull, APP_TITLE, glfwGetPrimaryMonitor(), NULL);
+	else
+		gWindow = glfwCreateWindow(gWindowWidth, gWindowHeight, APP_TITLE, NULL, NULL);
+
+	if (gWindow == NULL)
+	{
+		fmt::println("Failed to create GLFW window");
+		glfwTerminate();
+		return false;
+	}
+
+	// Make the window's context the current one
+	glfwMakeContextCurrent(gWindow);
+
+	gladLoadGL();
+
+	// Set the required callback functions
+	glfwSetKeyCallback(gWindow, glfw_onKey);
+	glfwSetMouseButtonCallback(gWindow, mouse_button_callback);
+	glfwSetFramebufferSizeCallback(gWindow, glfw_onFramebufferSize);
+	//glfwSetScrollCallback(gWindow, glfw_onMouseScroll);
+
+	// Hides and grabs cursor, unlimited movement
+	//glfwSetInputMode(gWindow, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+	glfwSetCursorPos(gWindow, gWindowWidth / 2.0, gWindowHeight / 2.0);
+
+	glClearColor(0.23f, 0.38f, 0.47f, 1.0f);
+
+	if (FULLSCREEN)
+		glViewport(0, 0, gWindowWidthFull, gWindowHeightFull);
+	else
+		glViewport(0, 0, gWindowWidth, gWindowHeight);
+
+	glEnable(GL_DEPTH_TEST);
+
+	return true;
+}
+
+/*--------------------- Main loop ---------------------------------------------------------------------------*/
 int main(int argc, char** argv)
 {
+	 /*
 	glutInit(&argc, argv);
 	glutInitDisplayMode(GLUT_DEPTH | GLUT_DOUBLE | GLUT_RGBA);
 	glutInitWindowPosition(0, 100);
 	glutInitWindowSize(SCRWIDTH, SCRHEIGHT);
 	glutCreateWindow("Bomb");
+
+	gladLoadGL();
 	init();
 	glutDisplayFunc(render);
+
 	glutKeyboardFunc(key);
 	glutMouseFunc(Mouse);
 	glutMotionFunc(Motion);
 	glutReshapeFunc(redisplay);
-	glutTimerFunc(15, timerFunction, -1);
+
+	glutTimerFunc(10, timerFunction, -1);
 	glutMainLoop();
+	*/
+
+	// /*
+	initOpenGL();
+	init();
+	lastTime = glfwGetTime();
+	while (!glfwWindowShouldClose(gWindow))
+	{
+		showFPS(gWindow);
+
+		render();
+
+		// Poll for and process events
+		glfwPollEvents();
+	}
+
+	glfwTerminate();
+	return 0;
+	// */
+
+}
+
+void showFPS(GLFWwindow* window) {
+	static double previousSeconds = 0.0;
+	static int frameCount = 0;
+	double elapsedSeconds;
+	double currentSeconds = glfwGetTime();
+
+	elapsedSeconds = currentSeconds - previousSeconds;
+
+	if (elapsedSeconds > 0.25) {
+		previousSeconds = currentSeconds;
+		double fps = (double)frameCount / elapsedSeconds;
+		double msPerFrame = 1000.0 / fps;
+
+		char title[80];
+		std::snprintf(title, sizeof(title), "Hello ImGUI @ fps: %.2f, ms/frame: %.2f", fps, msPerFrame);
+		glfwSetWindowTitle(window, title);
+
+		frameCount = 0;
+	}
+
+	frameCount++;
 }
