@@ -1,4 +1,4 @@
-#version 450 core
+#version 430 core
 
 out vec4 vColor; // Output color to the fragment shader
 
@@ -19,5 +19,5 @@ void main() {
 
     vColor = color;                    // Pass color to fragment shader
     gl_Position = vec4(position, 0.0, 1.0); // Convert to clip space
-    gl_PointSize = 16.0;                // Set point size
+    gl_PointSize = 10.0;                // Set point size
 }
