@@ -435,6 +435,10 @@ void render(void)
 	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, particles_SSB);
 	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, col_SSB);
 
+	GLuint defaultVAO;
+	glGenVertexArrays(1, &defaultVAO);
+	glBindVertexArray(defaultVAO);
+
 	particleShader.use();
 	glDrawArrays(GL_POINTS, 0, NUMP); // Render particles
 	glBindVertexArray(0);
@@ -504,7 +508,7 @@ bool initOpenGL()
 	// Set the OpenGL version
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 5);
-	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_COMPAT_PROFILE);
+	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 	glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);	// forward compatible with newer versions of OpenGL as they become available but not backward compatible (it will not run on devices that do not support OpenGL 3.3
 
 	glfwWindowHint(GLFW_RED_BITS, 8);		// Red channel bits
