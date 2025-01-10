@@ -351,7 +351,7 @@ void render(void)
 		updateF();
 	}
 
-	if ((glfwGetTime() - lastTime) > dt / 10)
+	if (glfwGetTime() - lastTime > abs(dt) / 10)
 	{
 		lastTime = glfwGetTime();
 		time_ = time_ + dt;
@@ -455,13 +455,13 @@ void glfw_onKey(GLFWwindow* window, int key, int scancode, int action, int mode)
 			glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 	}
 
-	if (key == GLFW_KEY_C)	calconoff = 1 - calconoff;
-	if (key == GLFW_KEY_D)	dt = -dt;
-	if (key == GLFW_KEY_SPACE) { resetparticles(); }
-	if (key == GLFW_KEY_KP_ADD) { force *= (-1); }
-	if (key == GLFW_KEY_KP_SUBTRACT) { force *= 0.98; }
+	if (key == GLFW_KEY_C && action == GLFW_PRESS)	calconoff = 1 - calconoff;
+	if (key == GLFW_KEY_D && action == GLFW_PRESS) { dt = -dt; }
+	if (key == GLFW_KEY_SPACE && action == GLFW_PRESS) { resetparticles(); }
+	if (key == GLFW_KEY_KP_ADD && action == GLFW_PRESS) { force *= (-1); }
+	if (key == GLFW_KEY_KP_SUBTRACT && action == GLFW_PRESS) { force *= 0.98; }
 
-	if (key == GLFW_KEY_R)
+	if (key == GLFW_KEY_R && action == GLFW_PRESS)
 	{
 		angle += 2 * 3.14 / 180.0;
 		fx2 = fx * cos(angle) - fy * sin(angle);
