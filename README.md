@@ -1,8 +1,28 @@
 # OpenGL Compute Shader
 
+> https://maciejmatyka.blogspot.com/2022/01/compute-shaders-in-open-frameworks.html
+
+
+
+## Demo 1:  Gray Scott Reaction-Diffusion System
+
+![](gray-scott.gif)
+
+
+
+## Demo 2: LBM Fluid
+
+![](lbm.gif)
+
+
+
 ## Windows Users
 
 Open `opengl-compute-shader.sln` and compile.
+
+![](windows.png)
+
+
 
 ## Linux Users
 
