@@ -4,7 +4,6 @@
 //#extension GL_ARB_shader_storage_buffer_object : enable
 
 /*-------------------- LBM model data -------------------------------------------------------------------------*/
-
 #define NUM_VECTORS 9
 #define tau 0.631//0.6
 #define omega (1.0/tau)		// viscosity, etc.
@@ -19,12 +18,11 @@ const float w[9] = {4.0/9.0, 1.0/9.0,1.0/9.0,1.0/9.0,1.0/9.0, 1.0/36.0,1.0/36.0,
 #define C_FLD 1
 #define C_BND 0
 
-layout( binding=0 ) buffer df0 { float f0[  ]; };
-layout( binding=1 ) buffer df1 { float f1[  ]; };
-layout( binding=2 ) buffer dcF { int F[  ]; };
-layout( binding=3 ) buffer dcU { float U[  ]; };
-layout( binding=4 ) buffer dcV { float V[  ]; };
-layout( binding=5 ) buffer col { float COL[  ]; };
+layout( binding = 0 ) buffer df0 { float f0[  ]; };
+layout( binding = 1 ) buffer df1 { float f1[  ]; };
+layout( binding = 2 ) buffer dcF { int   F[  ]; };
+layout( binding = 3 ) buffer dcU { float U[  ]; };
+layout( binding = 4 ) buffer dcV { float V[  ]; };
 
 layout(location = 0) uniform int NX;
 layout(location = 1) uniform int NY;
@@ -65,9 +63,6 @@ void main()
 		V[ idx ] = v;
 		u = u + 0.5 * devFx;
 		v = v + 0.5 * devFy;
-
-        // Nicolas: compute color
-         COL[idx] = 30*(u*u + v*v);     
 
         //4.
         for(int k=0; k<9; k++)		// collision + streaming (the main solver is here, really)

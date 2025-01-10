@@ -3,22 +3,22 @@
 //#extension GL_ARB_compute_shader : enable
 //#extension GL_ARB_shader_storage_buffer_object : enable
 
-#define C_FLD 1
 #define C_BND 0
+#define C_FLD 1
 
 struct pos
 {
 	vec2 xy;
 };
 
-layout(  binding=6 ) buffer ParticlesPos
-{
-	pos Positions[  ];
-};
-
 layout( binding = 2 ) buffer dcF { int F[  ]; };
 layout( binding = 3 ) buffer dcU { float dU[  ]; };
 layout( binding = 4 ) buffer dcV { float dV[  ]; };
+
+layout( binding = 5 ) buffer ParticlesPos
+{
+    pos Positions [  ];
+};
 
 layout( location = 0 )  uniform int NX;
 layout( location = 1 )  uniform int NY;
