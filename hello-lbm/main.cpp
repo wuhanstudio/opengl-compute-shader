@@ -36,8 +36,8 @@ GLFWwindow* gWindow = NULL;
 const char* APP_TITLE = "Hello LBM";
 
 // Window dimensions
-const int gWindowWidth = 1280;
-const int gWindowHeight = 720;
+int gWindowWidth = 1280;
+int gWindowHeight = 720;
 
 // Fullscreen dimensions
 const int gWindowWidthFull = 1920;
@@ -332,6 +332,8 @@ void init(void)
 void glfw_onFramebufferSize(GLFWwindow* window, int width, int height)
 {
 	glViewport(0, 0, width, height);
+	gWindowWidth = width;
+	gWindowHeight = height;
 }
 
 int c = 0;
@@ -405,7 +407,9 @@ void render(void)
 						x1, y1,
 						x1 + dx, y1,
 						x1 + dx, y1 + dy,
-						x1, y1 + dy
+						x1 + dx, y1 + dy,
+						x1, y1 + dy,
+						x1, y1,
 					});
 			}
 		}
@@ -417,14 +421,15 @@ void render(void)
 	glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float), vertices.data(), GL_DYNAMIC_DRAW);
 	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, (void*)0);
 	glEnableVertexAttribArray(0);
-	glBindVertexArray(0);
+	//glBindVertexArray(0);
 
 	// Render obstacles
 	shader.use();
 	glBindVertexArray(VAO);
-	glDrawArrays(GL_QUADS, 0, vertices.size() / 2);
+	//glDrawArrays(GL_QUADS, 0, vertices.size() / 2);
+	glDrawArrays(GL_TRIANGLES, 0, vertices.size() / 2);
 	glBindVertexArray(0);
-	glUseProgram(0);
+	//glUseProgram(0);
 
 	// Render particles
 	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, particles_SSB);
@@ -433,7 +438,7 @@ void render(void)
 	particleShader.use();
 	glDrawArrays(GL_POINTS, 0, NUMP); // Render particles
 	glBindVertexArray(0);
-	glUseProgram(0);
+	//glUseProgram(0);
 
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 
