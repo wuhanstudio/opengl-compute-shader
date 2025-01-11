@@ -5,6 +5,8 @@
 #include <sstream>
 
 #include <glad/glad.h>
+#include <EGL/egl.h>
+
 #include <GLFW/glfw3.h>
 
 #include "ShaderProgram.h"
@@ -16,7 +18,7 @@ bool USE_TEST_DATA = false;
 bool FULLSCREEN = false;
 
 // Gray Scott Reaction Diffusion Frid
-const int WIDTH = 1280, HEIGHT = 720;
+const int WIDTH = 640, HEIGHT = 320;
 
 GLFWwindow* gWindow = NULL;
 const char* APP_TITLE = "Gray Scott - Compute Shader";
@@ -49,6 +51,53 @@ float B2cpu[gWindowWidth * gWindowHeight];
 // Testing texture data
 GLuint testData[WIDTH * HEIGHT * 4];
 
+void checkGLError(const char* functionName) {
+	GLenum err;
+	while ((err = glGetError()) != GL_NO_ERROR) {
+		const char* error;
+		switch (err) {
+		case GL_INVALID_ENUM:
+			error = "GL_INVALID_ENUM";
+			break;
+		case GL_INVALID_VALUE:
+			error = "GL_INVALID_VALUE";
+			break;
+		case GL_INVALID_OPERATION:
+			error = "GL_INVALID_OPERATION";
+			break;
+		case GL_INVALID_FRAMEBUFFER_OPERATION:
+			error = "GL_INVALID_FRAMEBUFFER_OPERATION";
+			break;
+		case GL_OUT_OF_MEMORY:
+			error = "GL_OUT_OF_MEMORY";
+			break;
+		default:
+			error = "UNKNOWN_ERROR";
+		}
+		printf("OpenGL Error: %s in %s\n", error, functionName);
+	}
+}
+
+void checkProgramLinking(GLuint program) {
+	GLint success;
+	glGetProgramiv(program, GL_LINK_STATUS, &success);
+	if (!success) {
+		char log[512];
+		glGetProgramInfoLog(program, 512, NULL, log);
+		printf("Program Linking Error: %s\n", log);
+	}
+}
+
+void checkShaderCompilation(GLuint shader) {
+	GLint success;
+	glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
+	if (!success) {
+		char log[512];
+		glGetShaderInfoLog(shader, 512, NULL, log);
+		printf("Compute Shader Compilation Error: %s\n", log);
+	}
+}
+
 int main(int argc, char **argv)
 {
 	initOpenGL();
@@ -60,10 +109,12 @@ int main(int argc, char **argv)
 	GLuint compute_shader = glCreateShader(GL_COMPUTE_SHADER);
 	glShaderSource(compute_shader, 1, &csSourcePtr, NULL);
 	glCompileShader(compute_shader);
+	checkShaderCompilation(compute_shader);
 
 	GLuint compute_program = glCreateProgram();
 	glAttachShader(compute_program, compute_shader);
 	glLinkProgram(compute_program);
+	checkProgramLinking(compute_program);
 
 	// Load the vertex and fragment shaders for rendering the results
 	ShaderProgram shader;
@@ -114,9 +165,13 @@ int main(int argc, char **argv)
 	GLuint tex_output;
 
 	glGenTextures(1, &tex_output);
-	glBindTexture(GL_TEXTURE_2D, tex_output);
+	checkGLError("glGenTextures");
 
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, WIDTH, HEIGHT, 0, GL_RGBA, GL_UNSIGNED_INT, NULL);
+	glBindTexture(GL_TEXTURE_2D, tex_output);
+	checkGLError("glBindTexture");
+
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, WIDTH, HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+	checkGLError("glTexImage2D");
 
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -145,6 +200,7 @@ int main(int argc, char **argv)
 
 		// Allocate and upload the texture data
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, WIDTH, HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, &testData);
+		checkGLError("glGenTextures");
 
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
@@ -178,6 +234,14 @@ int main(int argc, char **argv)
 	GLint work_grp_inv;
 	glGetIntegerv(GL_MAX_COMPUTE_WORK_GROUP_INVOCATIONS, &work_grp_inv);
 	printf("max local work group invocations %i\n", work_grp_inv);
+
+	GLint maxImageUnits;
+	glGetIntegerv(GL_MAX_IMAGE_UNITS, &maxImageUnits);
+	printf("Max Image Units: %d\n", maxImageUnits);
+
+	GLint maxTexSize;
+	glGetIntegerv(GL_MAX_TEXTURE_SIZE, &maxTexSize);
+	printf("Max Texture Size: %d\n", maxTexSize);
 
 	// Dynamically allocated arrays for the simulation
 	//float* A1cpu = new float[gWindowWidth*gWindowHeight];
@@ -249,11 +313,20 @@ int main(int argc, char **argv)
 
 			// launch compute shaders!
 			glUseProgram(compute_program);
+			checkGLError("glUseProgram");
 
 			glUniform1i(glGetUniformLocation(compute_program, "W"), WIDTH);
+			checkGLError("glUniform1i");
 			glUniform1i(glGetUniformLocation(compute_program, "H"), HEIGHT);
+			checkGLError("glUniform1i");
 
-			glBindImageTexture(4, tex_output, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA8);
+			if (tex_output != 0) {
+				glBindImageTexture(4, tex_output, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA8);
+			}
+			else {
+				// Handle the error, e.g., log it or initialize the texture
+				fmt::println("Error: tex_output is not initialized properly.");
+			}
 			glDispatchCompute(WIDTH / 20, HEIGHT / 20, 1);
 		}
 		
@@ -333,14 +406,14 @@ void glfw_onKey(GLFWwindow* window, int key, int scancode, int action, int mode)
 	if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
 		glfwSetWindowShouldClose(window, GL_TRUE);
 
-	if (key == GLFW_KEY_1 && action == GLFW_PRESS)
-	{
-		gWireframe = !gWireframe;
-		if (gWireframe)
-			glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-		else
-			glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-	}
+	//if (key == GLFW_KEY_1 && action == GLFW_PRESS)
+	//{
+	//	gWireframe = !gWireframe;
+	//	if (gWireframe)
+	//		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+	//	else
+	//		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+	//}
 }
 
 // Is called when the window is resized
@@ -358,9 +431,9 @@ bool initOpenGL()
 	}
 
 	// Set the OpenGL version
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 4);
-	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
+	glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_ES_API);
 	glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);	// forward compatible with newer versions of OpenGL as they become available but not backward compatible (it will not run on devices that do not support OpenGL 3.3
 
 	// Create a window
@@ -384,7 +457,22 @@ bool initOpenGL()
 	// Make the window's context the current one
 	glfwMakeContextCurrent(gWindow);
 
-	gladLoadGL();
+	EGLDisplay display = eglGetDisplay(EGL_DEFAULT_DISPLAY);
+	if (display == EGL_NO_DISPLAY) {
+		printf("Failed to get EGL display\n");
+		return -1;
+	}
+
+	if (!eglInitialize(display, NULL, NULL)) {
+		printf("Failed to initialize EGL\n");
+		return -1;
+	}
+	//gladLoadGL();
+	if (!gladLoadGLES2Loader((GLADloadproc)glfwGetProcAddress)) {
+        printf("Failed to initialize GLAD for OpenGL ES 3.2\n");
+        return -1;
+    }
+	printf("Loaded OpenGL ES Version: %d.%d\n", GLVersion.major, GLVersion.minor);
 
 	// Set the required callback functions
 	glfwSetKeyCallback(gWindow, glfw_onKey);

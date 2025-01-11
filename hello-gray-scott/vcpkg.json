@@ -1,9 +1,13 @@
 {
   "builtin-baseline": "26abb5b33f976246a5f2cdc45cdd073d51caff06",
   "dependencies": [
-    "glad",
+    {
+      "name": "glad",
+      "features": [ "gles2-api-32" ]
+    },
     "glfw3",
     "glm",
-    "fmt"
+    "fmt",
+    "egl"
   ]
 }

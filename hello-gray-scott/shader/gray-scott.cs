@@ -1,4 +1,10 @@
-#version 440
+#version 310 es
+//#extension GL_ARB_compute_shader : enable
+//#extension GL_ARB_shader_storage_buffer_object : enable
+
+precision mediump float;
+precision mediump int;
+precision lowp image2D;
 
 layout(binding = 0) buffer dcA1 { float A1 [  ]; };
 layout(binding = 1) buffer dcA2 { float A2 [  ]; };
@@ -21,12 +27,12 @@ int per(int x, int nx)
 
 vec4 color(float t)
 {
-    float coltab[] = { 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 1.0, 0.7, 0.4, 0.00, 0.15, 0.20 };
+    const float coltab[12] = float[](0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 1.0, 0.7, 0.4, 0.00, 0.15, 0.20);
 
     vec4 col;
-    col.r = coltab[0] + coltab[3] * cos(2 * 3.1416 * (coltab[6] * t + coltab[9]));
-    col.g = coltab[1] + coltab[4] * cos(2 * 3.1416 * (coltab[7] * t + coltab[10]));
-    col.b = coltab[2] + coltab[5] * cos(2 * 3.1416 * (coltab[8] * t + coltab[11]));
+    col.r = coltab[0] + coltab[3] * cos(2.0 * 3.1416 * (coltab[6] * t + coltab[9]));
+    col.g = coltab[1] + coltab[4] * cos(2.0 * 3.1416 * (coltab[7] * t + coltab[10]));
+    col.b = coltab[2] + coltab[5] * cos(2.0 * 3.1416 * (coltab[8] * t + coltab[11]));
     col.a = 1.0;
 
     return col;
@@ -48,9 +54,9 @@ void main()
     float k = 0.065;
 
     // f and k dependent on "x" position
-    float h = 0.5 * i / float(W);
-    f = 0.02 * h + (1 - h) * 0.018;
-    k = 0.035 * h + (1 - h) * 0.051;
+    float h = 0.5 * float(i) / float(W);
+    f = 0.02 * h + (1.0 - h) * 0.018;
+    k = 0.035 * h + (1.0 - h) * 0.051;
 
     float dt = 1.0;
     int idx0, idx1, idx2, idx3, idx4, idx5, idx6, idx7, idx8;
@@ -75,7 +81,7 @@ void main()
     float laplB = -1.0 * B1[idx0] + .2 * (B1[idx6] + B1[idx2] + B1[idx4] + B1[idx8]) + 0.05 * (B1[idx1] + B1[idx3] + B1[idx5] + B1[idx7]);
 
     // Gray Scott model
-    A2[idx0] = A1[idx0] + (DA * laplA - A1[idx0] * B1[idx0] * B1[idx0] + f * (1 - A1[idx0])) * dt;
+    A2[idx0] = A1[idx0] + (DA * laplA - A1[idx0] * B1[idx0] * B1[idx0] + f * (1.0 - A1[idx0])) * dt;
     B2[idx0] = B1[idx0] + (DB * laplB + A1[idx0] * B1[idx0] * B1[idx0] - (k + f) * B1[idx0]) * dt;
 
     // visualization
