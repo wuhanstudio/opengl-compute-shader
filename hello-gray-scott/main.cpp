@@ -170,8 +170,8 @@ int main(int argc, char **argv)
 	glBindTexture(GL_TEXTURE_2D, tex_output);
 	checkGLError("glBindTexture");
 
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, WIDTH, HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
-	checkGLError("glTexImage2D");
+	glTexStorage2D(GL_TEXTURE_2D, 1, GL_RGBA8, WIDTH, HEIGHT);
+	checkGLError("glTexStorage2D");
 
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -327,7 +327,7 @@ int main(int argc, char **argv)
 				// Handle the error, e.g., log it or initialize the texture
 				fmt::println("Error: tex_output is not initialized properly.");
 			}
-			glDispatchCompute(WIDTH / 20, HEIGHT / 20, 1);
+			glDispatchCompute(WIDTH / 10, HEIGHT / 10, 1);
 		}
 		
 		// make sure writing to image has finished before read

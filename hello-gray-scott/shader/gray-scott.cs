@@ -13,7 +13,7 @@ layout(binding = 3) buffer dcB2 { float B2 [  ]; };
 
 layout(rgba8, binding = 4) uniform writeonly image2D img;
 
-layout(local_size_x = 20, local_size_y = 20, local_size_z = 1) in;
+layout(local_size_x = 10, local_size_y = 10, local_size_z = 1) in;
 
 uniform int W;
 uniform int H;
