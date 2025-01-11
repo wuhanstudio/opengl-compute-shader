@@ -8,6 +8,7 @@
     "glfw3",
     "glm",
     "fmt",
-    "egl"
+    "egl",
+    "opengl"
   ]
 }
