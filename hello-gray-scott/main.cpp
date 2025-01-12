@@ -432,7 +432,7 @@ bool initOpenGL()
 
 	// Set the OpenGL version
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 2);
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_ES_API);
 	glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);	// forward compatible with newer versions of OpenGL as they become available but not backward compatible (it will not run on devices that do not support OpenGL 3.3
 
@@ -457,6 +457,7 @@ bool initOpenGL()
 	// Make the window's context the current one
 	glfwMakeContextCurrent(gWindow);
 
+	/*
 	EGLDisplay display = eglGetDisplay(EGL_DEFAULT_DISPLAY);
 	if (display == EGL_NO_DISPLAY) {
 		printf("Failed to get EGL display\n");
@@ -467,6 +468,7 @@ bool initOpenGL()
 		printf("Failed to initialize EGL\n");
 		return -1;
 	}
+	*/
 	//gladLoadGL();
 	if (!gladLoadGLES2Loader((GLADloadproc)glfwGetProcAddress)) {
         printf("Failed to initialize GLAD for OpenGL ES 3.2\n");

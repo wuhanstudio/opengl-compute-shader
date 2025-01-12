@@ -1,4 +1,4 @@
-#version 310 es
+#version 320 es
 precision mediump float;
 
 in vec2 TexCoords;

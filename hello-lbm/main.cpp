@@ -27,6 +27,7 @@
 #include <string>
 
 #include <glad/glad.h>
+#include <EGL/egl.h>
 #include <GLFW/glfw3.h>
 
 #include "ShaderProgram.h"
@@ -41,8 +42,8 @@ const char* APP_TITLE = "Hello LBM";
 int gWindowWidth = 1280;
 int gWindowHeight = 720;
 
-const int NX = 640;		// solver grid resolution
-const int NY = 360;
+const int NX = 320;		// solver grid resolution
+const int NY = 180;
 const int NUM_PARTICLE = 1000000;
 
 // Fullscreen dimensions
@@ -340,9 +341,9 @@ bool initOpenGL()
 	}
 
 	// Set the OpenGL version
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 2);
+	glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_ES_API);
 	glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);	// forward compatible with newer versions of OpenGL as they become available but not backward compatible (it will not run on devices that do not support OpenGL 3.3
 
 	glfwWindowHint(GLFW_RED_BITS, 8);		// Red channel bits
@@ -366,7 +367,12 @@ bool initOpenGL()
 	// Make the window's context the current one
 	glfwMakeContextCurrent(gWindow);
 
-	gladLoadGL();
+	// gladLoadGL();
+        if (!gladLoadGLES2Loader((GLADloadproc)glfwGetProcAddress)) {
+	    fmt::println("Failed to initialize GLAD for OpenGL ES 3.2\n");
+	    return -1;
+	}
+        fmt::println("Loaded OpenGL ES Version: {}.{}", GLVersion.major, GLVersion.minor);
 
 	// Set the required callback functions
 	glfwSetKeyCallback(gWindow, glfw_onKey);
@@ -434,8 +440,8 @@ void render(void)
 	// Render
 	glClear(GL_COLOR_BUFFER_BIT);
 
-	glEnable(GL_POINT_SMOOTH);
-	glEnable(GL_MULTISAMPLE);
+	// glEnable(GL_POINT_SMOOTH);
+	// glEnable(GL_MULTISAMPLE);
 
 	glEnable(GL_BLEND);
 	//glBlendFunc(GL_SRC_COLOR, GL_ONE_MINUS_SRC_COLOR);
@@ -510,6 +516,7 @@ void glfw_onKey(GLFWwindow* window, int key, int scancode, int action, int mode)
 	if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
 		glfwSetWindowShouldClose(window, GL_TRUE);
 
+	/*
 	if (key == GLFW_KEY_1 && action == GLFW_PRESS)
 	{
 		gWireframe = !gWireframe;
@@ -518,6 +525,7 @@ void glfw_onKey(GLFWwindow* window, int key, int scancode, int action, int mode)
 		else
 			glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 	}
+	*/
 
 	if (key == GLFW_KEY_D && action == GLFW_PRESS) { dt = -dt; }
 	if (key == GLFW_KEY_SPACE && action == GLFW_PRESS) { resetparticles(); }

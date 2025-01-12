@@ -1,5 +1,7 @@
 // http://panoramix.ift.uni.wroc.pl/~maq/eng/
-#version 430 core
+#version 320 es
+precision mediump float;
+
 //#extension GL_ARB_compute_shader : enable
 //#extension GL_ARB_shader_storage_buffer_object : enable
 
@@ -11,10 +13,10 @@
 #define nu ((2.0*tau-1.0)/6.0)//((1.0/3.0)* (tau-1.0/2.0)) //112.6666
 
 #define C 0.06
-const int ex[9] = {0,  1,0,-1, 0,  1,-1,-1, 1};
-const int ey[9] = {0,  0,1, 0,-1,  1, 1,-1,-1};
-const int inv[9] = {0, 3,4, 1, 2,  7, 8, 5, 6};
-const float w[9] = {4.0/9.0, 1.0/9.0,1.0/9.0,1.0/9.0,1.0/9.0, 1.0/36.0,1.0/36.0,1.0/36.0,1.0/36.0};
+const int   ex[9]  = int[](0,  1,0,-1, 0,  1,-1,-1, 1);
+const int   ey[9]  = int[](0,  0,1, 0,-1,  1, 1,-1,-1);
+const int   inv[9] = int[](0, 3,4, 1, 2,  7, 8, 5, 6);
+const float w[9]   = float[](4.0/9.0, 1.0/9.0,1.0/9.0,1.0/9.0,1.0/9.0, 1.0/36.0,1.0/36.0,1.0/36.0,1.0/36.0);
 #define C_FLD 1
 #define C_BND 0
 
@@ -44,18 +46,18 @@ void main()
 	int j = int(gl_GlobalInvocationID.y);
 	int idx = i+j*NX;
 	float feq[9], fneq[9];	
-	float rho = 0;
-	float u = 0;
-	float v = 0;
-    float Pi_x_x, Pi_x_y, Pi_y_y,Q,S,TauS, OMEGAS;
+	float rho = 0.0;
+	float u = 0.0;
+	float v = 0.0;
+	float Pi_x_x, Pi_x_y, Pi_y_y,Q,S,TauS, OMEGAS;
     
 	if( F[ idx ] == C_FLD )
 	{	
 		for(int k=0; k<9; k++)			// calculate density and velocity
 		{
 			rho = rho + f0[idx*NUM_VECTORS+k];
-			u = u + f0[idx*NUM_VECTORS+k]*ex[k];
-			v = v + f0[idx*NUM_VECTORS+k]*ey[k];
+			u = u + f0[idx*NUM_VECTORS+k]*float(ex[k]);
+			v = v + f0[idx*NUM_VECTORS+k]*float(ey[k]);
 		}
 		u /= rho;
 		v /= rho;
@@ -76,7 +78,7 @@ void main()
             //Compute the non equilibrium part of the distribution functions
             //fi_neq = fi - fi_eq
 
-            feq[k] = w[k] * rho * (1.0f - (3.0f/2.0f) * (u*u + v*v) + 3.0f * (ex[k] * u + ey[k]*v) + (9.0f/2.0f) * (ex[k] * u + ey[k]*v) * (ex[k] * u + ey[k]*v));
+            feq[k] = w[k] * rho * (1.0f - (3.0f/2.0f) * (u*u + v*v) + 3.0f * (float(ex[k])*u + float(ey[k])*v) + (9.0f/2.0f) * (float(ex[k])*u + float(ey[k])*v) * (float(ex[k])*u + float(ey[k])*v));
             //fneq[k] = f0[idx*NUM_VECTORS+k]*ex[k] - feq[k];
         }
 
@@ -92,9 +94,9 @@ void main()
 
             // compute feq
 			if( F[ idxp ] == C_BND )
-				f1[ idx*NUM_VECTORS + inv[k] ] = (1-OMEGAS) * f0[idx*NUM_VECTORS+k] + OMEGAS * feq[k];//omega * feq[k];
+				f1[ idx*NUM_VECTORS + inv[k] ] = (1.0-OMEGAS) * f0[idx*NUM_VECTORS+k] + OMEGAS * feq[k];//omega * feq[k];
 			else
-				f1[ idxp*NUM_VECTORS + k] = (1-OMEGAS) * f0[idx*NUM_VECTORS+k] + OMEGAS * feq[k];//omega * feq[k];
+				f1[ idxp*NUM_VECTORS + k] = (1.0-OMEGAS) * f0[idx*NUM_VECTORS+k] + OMEGAS * feq[k];//omega * feq[k];
 		}
 	}
 }

@@ -8,8 +8,7 @@ project(HelloGrayScott)
 find_package(glad CONFIG REQUIRED)
 find_package(glfw3 CONFIG REQUIRED)
 find_package(fmt CONFIG REQUIRED)
-find_package(OpenGL REQUIRED)
 
 add_executable(hello-gray-scott main.cpp ShaderProgram.cpp)
 
-target_link_libraries(hello-gray-scott PRIVATE OpenGL::EGL glfw glad::glad fmt::fmt)
+target_link_libraries(hello-gray-scott PRIVATE glfw glad::glad fmt::fmt)

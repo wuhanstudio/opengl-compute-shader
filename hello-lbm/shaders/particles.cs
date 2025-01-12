@@ -1,5 +1,6 @@
 // 2012, http://panoramix.ift.uni.wroc.pl/~maq/eng/
-#version 430 core
+#version 320 es
+precision mediump float;
 //#extension GL_ARB_compute_shader : enable
 //#extension GL_ARB_shader_storage_buffer_object : enable
 
@@ -34,39 +35,39 @@ float BilinearInterpolationC(float x,float y,float x1,float x2,float y1,float y2
 {
 	float t = (x-x1) / (x2 - x1);
 	float u = (y-y1) / (y2 - y1);
-	return (1-t)*(1-u)*f11 + t*(1-u)*f21 + t*u*f22 + (1-t)*u*f12;
+	return (1.0-t)*(1.0-u)*f11 + t*(1.0-u)*f21 + t*u*f22 + (1.0-t)*u*f12;
 }
 
 void main()
 {
-	uint gid = gl_GlobalInvocationID.x;		// move massless particle along 
-	vec2 p = Positions[ gid ].xy;			// an instant velocity field
-	int i = int(p.x * NX);
-	int j = int(p.y * NY);
-	int idx = i+j*NX;
+    uint gid = gl_GlobalInvocationID.x;		// move massless particle along 
+    vec2 p = Positions[ gid ].xy;			// an instant velocity field
+    int i = int(p.x * float(NX));
+    int j = int(p.y * float(NY));
+    int idx = i+j*NX;
 
-	float u;// = dU[idx];
-	float v;// = dV[idx];
-
-    u = BilinearInterpolationC(p.x*(NX),p.y*(NY), i,i+1, j,j+1, dU[j*NX+i],dU[j*NX+i+1],dU[(j+1)*NX+i+1],dU[(j+1)*NX+i]);
-	v = BilinearInterpolationC(p.x*(NX),p.y*(NY), i,i+1, j,j+1, dV[j*NX+i],dV[j*NX+i+1],dV[(j+1)*NX+i+1],dV[(j+1)*NX+i]);
+    float u;// = dU[idx];
+    float v;// = dV[idx];
+    
+    u = BilinearInterpolationC(p.x*float(NX), p.y*float(NY), float(i), float(i+1), float(j), float(j+1), dU[j*int(NX)+i], dU[j*int(NX)+i+1], dU[(j+1)*int(NX)+i+1], dU[(j+1)*int(NX)+i]);
+    v = BilinearInterpolationC(p.x*float(NX), p.y*float(NY), float(i), float(i+1), float(j), float(j+1), dV[j*int(NX)+i], dV[j*int(NX)+i+1], dV[(j+1)*int(NX)+i+1], dV[(j+1)*int(NX)+i]);
 
     p.x = p.x + u*DT;
-	p.y = p.y + v*DT;
+    p.y = p.y + v*DT;
 
-    i = int(p.x * NX);
-    j = int(p.y * NY);
+    i = int(p.x * float(NX));
+    j = int(p.y * float(NY));
 
-    if(p.x < 0) p.x += 1;
-	if(p.x > 1) p.x -= 1;
-	if(p.y > 1) p.y -= 1;
-	if(p.y < 0) p.y += 1;
+    if(p.x < 0.0) p.x += 1.0;
+    if(p.x > 1.0) p.x -= 1.0;
+    if(p.y > 1.0) p.y -= 1.0;
+    if(p.y < 0.0) p.y += 1.0;
 
     if(F[ i+j*NX ] == C_BND)
-	{
-			p.x = rand(p.xy);   // 0-1
-			p.y = rand(p.xy);   // 0-1
-	}
+    {
+        p.x = rand(p.xy);   // 0-1
+        p.y = rand(p.xy);   // 0-1
+    }
 
-	Positions[ gid ].xy = p;
+    Positions[ gid ].xy = p;
 }
