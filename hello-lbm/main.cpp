@@ -101,7 +101,6 @@ struct p
 {
 	float x, y;
 };
-struct p particles[NUM_PARTICLE];
 
 struct col
 {
