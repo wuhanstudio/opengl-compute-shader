@@ -55,7 +55,6 @@ GLuint VAO, VBO;
 ShaderProgram obstacleShader;
 ShaderProgram particleShader;
 
-double lastTime;
 void showFPS(GLFWwindow* window);
 void glfw_onKey(GLFWwindow* window, int key, int scancode, int action, int mode);
 void glfw_onMouse(GLFWwindow* window, int button, int action, int mods);
@@ -405,12 +404,6 @@ void render(void)
 		updateObstacle();
 	}
 
-	if (glfwGetTime() - lastTime > abs(dt) / 10)
-	{
-		lastTime = glfwGetTime();
-		time_ = time_ + dt;
-	}
-
 	// computation (!)
 	for (int i = 0; i < NUMR; i++)
 	{
@@ -534,14 +527,10 @@ void glfw_onKey(GLFWwindow* window, int key, int scancode, int action, int mode)
 
 void glfw_onMouse(GLFWwindow* window, int button, int action, int mods)
 {
-	double lastMouseX, lastMouseY;
 	if (button == GLFW_MOUSE_BUTTON_LEFT)
 	{
 		if (GLFW_PRESS == action)
-		{
 			mousedown = 1;
-			glfwGetCursorPos(gWindow, &lastMouseX, &lastMouseY);
-		}
 		else if (GLFW_RELEASE == action)
 			mousedown = 0;
 	}
@@ -579,8 +568,6 @@ int main(int argc, char** argv)
 		fmt::println("GLFW initialization failed");
 		return -1;
 	}
-
-	lastTime = (GLfloat)glfwGetTime();
 
 	while (!glfwWindowShouldClose(gWindow))
 	{
