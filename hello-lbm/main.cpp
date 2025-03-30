@@ -55,6 +55,8 @@ GLuint VAO, VBO;
 ShaderProgram obstacleShader;
 ShaderProgram particleShader;
 
+std::vector<float> vertices;
+
 void showFPS(GLFWwindow* window);
 void glfw_onKey(GLFWwindow* window, int key, int scancode, int action, int mode);
 void glfw_onMouse(GLFWwindow* window, int button, int action, int mods);
@@ -73,13 +75,11 @@ float xMouse, yMouse;
 #define NUM_VECTORS 9	// lbm basis vectors (d2q9 model)
 
 float fx = 1, fx2 = 1;
-float fy = 0, fy2 = 1;
+float fy = 0, fy2 = 0;
 
 float angle = 0;				// for rotations of the body force vec
 float force = -0.000007;		// body force magnitude
 int c = 0;
-
-float time_ = 0;
 
 /*--------------------- LBM State vector ----------------------------------------------------------------*/
 GLuint c0_SSB;
@@ -192,6 +192,31 @@ void updateObstacle(void)
 		F_temp[x + 0 * NX] = F_temp[x + (NY - 1) * NX] = 0;
 
 	glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
+
+	vertices.clear();
+	for (int x = 0; x < NX; x++) {
+		for (int y = 0; y < NY; y++) {
+			int idx = x + y * NX;
+
+			float x1 = static_cast<float>(x) / NX * 2.0 - 1.0;
+			float y1 = static_cast<float>(y) / NY * 2.0 - 1.0;
+			float dx = 1.0f / NX * 2.0;
+			float dy = 1.0f / NY * 2.0;
+
+			if (F_cpu[idx] == 0) {
+				// Define quad vertices and color
+				vertices.insert(vertices.end(),
+					{
+						x1, y1,
+						x1 + dx, y1,
+						x1 + dx, y1 + dy,
+						x1 + dx, y1 + dy,
+						x1, y1 + dy,
+						x1, y1,
+					});
+			}
+		}
+	}
 }
 
 void init(void)
@@ -432,31 +457,6 @@ void render(void)
 	glEnable(GL_BLEND);
 	//glBlendFunc(GL_SRC_COLOR, GL_ONE_MINUS_SRC_COLOR);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-	std::vector<float> vertices;
-	for (int x = 0; x < NX; x++) {
-		for (int y = 0; y < NY; y++) {
-			int idx = x + y * NX;
-
-			float x1 = static_cast<float>(x) / NX * 2.0 - 1.0;
-			float y1 = static_cast<float>(y) / NY * 2.0 - 1.0;
-			float dx = 1.0f / NX * 2.0;
-			float dy = 1.0f / NY * 2.0;
-
-			if (F_cpu[idx] == 0) {
-				// Define quad vertices and color
-				vertices.insert(vertices.end(),
-					{
-						x1, y1,
-						x1 + dx, y1,
-						x1 + dx, y1 + dy,
-						x1 + dx, y1 + dy,
-						x1, y1 + dy,
-						x1, y1,
-					});
-			}
-		}
-	}
 
 	// Bind VAO VBO
 	glBindVertexArray(VAO);
