@@ -455,8 +455,8 @@ void render(void)
 	glEnable(GL_MULTISAMPLE);
 
 	glEnable(GL_BLEND);
-	//glBlendFunc(GL_SRC_COLOR, GL_ONE_MINUS_SRC_COLOR);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	glBlendFunc(GL_SRC_COLOR, GL_ONE_MINUS_SRC_COLOR);
+	//glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 	// Bind VAO VBO
 	glBindVertexArray(VAO);
